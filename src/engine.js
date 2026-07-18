@@ -348,10 +348,12 @@ export class Game {
 
   _buildPlayer() {
     const g = new THREE.Group()
+    // matériaux stockés -> l'apparence (personnage) est modifiable via setCharacter()
     const skin = new THREE.MeshStandardMaterial({ color: '#f6cfa8', roughness: 0.8 })
     const shirt = new THREE.MeshStandardMaterial({ color: '#22d3ee', roughness: 0.6 })
     const pants = new THREE.MeshStandardMaterial({ color: '#22406a', roughness: 0.8 })
     const cap = new THREE.MeshStandardMaterial({ color: '#ef4444', roughness: 0.7 })
+    this._pMat = { skin, shirt, pants, cap }
 
     const torso = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.1, 0.55), shirt)
     torso.position.y = 1.55; torso.castShadow = true; g.add(torso)
@@ -512,6 +514,15 @@ export class Game {
     this.running = true
     this.last = performance.now()
     if (!this.raf) this._loop(this.last)
+  }
+
+  // Change l'apparence du joueur (couleurs) selon le personnage choisi.
+  setCharacter(colors) {
+    if (!this._pMat || !colors) return
+    if (colors.skin) this._pMat.skin.color.set(colors.skin)
+    if (colors.shirt) this._pMat.shirt.color.set(colors.shirt)
+    if (colors.pants) this._pMat.pants.color.set(colors.pants)
+    if (colors.cap) this._pMat.cap.color.set(colors.cap)
   }
 
   // ---------- Contrôles ----------
