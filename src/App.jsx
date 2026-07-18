@@ -277,24 +277,24 @@ export default function App() {
       {state === 'ranking' && (
         <div className="overlay">
           <h2>Classement — fin de la manche {round}</h2>
-          <table style={{ borderCollapse: 'collapse', margin: '8px auto 16px', minWidth: 280 }}>
+          <table style={{ borderCollapse: 'collapse', margin: '14px auto 22px', minWidth: 440, fontSize: '1.5rem' }}>
             <thead>
               <tr style={{ opacity: 0.7 }}>
-                <th style={{ padding: '4px 10px', textAlign: 'left' }}>#</th>
-                <th style={{ padding: '4px 10px', textAlign: 'left' }}>Joueur</th>
-                <th style={{ padding: '4px 10px', textAlign: 'right' }}>Manche 🪙</th>
-                <th style={{ padding: '4px 10px', textAlign: 'right' }}>Total 🪙</th>
+                <th style={{ padding: '8px 18px', textAlign: 'left' }}>#</th>
+                <th style={{ padding: '8px 18px', textAlign: 'left' }}>Joueur</th>
+                <th style={{ padding: '8px 18px', textAlign: 'right' }}>Manche 🪙</th>
+                <th style={{ padding: '8px 18px', textAlign: 'right' }}>Total 🪙</th>
               </tr>
             </thead>
             <tbody>
               {ranking.map((r, rank) => (
                 <tr key={r.i} style={{ borderTop: '1px solid rgba(255,255,255,.12)' }}>
-                  <td style={{ padding: '6px 10px' }}>{rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : rank + 1}</td>
-                  <td style={{ padding: '6px 10px' }}>{pName(r.i)}</td>
-                  <td style={{ padding: '6px 10px', textAlign: 'right', opacity: 0.8 }}>
+                  <td style={{ padding: '12px 18px', fontSize: '1.7rem' }}>{rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : rank + 1}</td>
+                  <td style={{ padding: '12px 18px' }}>{pName(r.i)}</td>
+                  <td style={{ padding: '12px 18px', textAlign: 'right', opacity: 0.8 }}>
                     {lastCoins[r.i] != null ? lastCoins[r.i].toLocaleString('fr-FR') : '—'}
                   </td>
-                  <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: 700 }}>{r.t.toLocaleString('fr-FR')}</td>
+                  <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: 700 }}>{r.t.toLocaleString('fr-FR')}</td>
                 </tr>
               ))}
             </tbody>
