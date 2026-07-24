@@ -76,8 +76,9 @@ export default function Layout() {
 
   // Fin d'un run : solo (meilleur score) ou match (tours + classement).
   endRunRef.current = (finalScore, finalCoins) => {
-    // Classement Supabase : meilleur score par (pseudo du jeu, appareil).
-    submitScore(names[turnIdx] || `Joueur ${turnIdx + 1}`, getDevice(), finalScore)
+    // Classement Supabase : meilleures PIÈCES gagnées en une partie
+    // par (pseudo du jeu, appareil) — pas le score de distance.
+    submitScore(names[turnIdx] || `Joueur ${turnIdx + 1}`, getDevice(), finalCoins)
     if (!isMatch) {
       if (finalScore > best) { setBest(finalScore); localStorage.setItem('dashikara_best', String(finalScore)) }
       go('/over')

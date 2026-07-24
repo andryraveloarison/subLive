@@ -27,7 +27,7 @@ export default function RankingScreen({ round, ranking, pName, lastCoins, onNext
           ))}
         </tbody>
       </table>
-      <Leaderboard limit={8} title="CLASSEMENT EN LIGNE · MEILLEUR SCORE" />
+      <Leaderboard limit={8} title="CLASSEMENT EN LIGNE · POINTS GAGNÉS" />
       <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 16 }}>
         <button className="btn" onClick={onNext}>Manche {round + 1} ▶</button>
         <button className="btn ghost" onClick={onEnd}>Terminer</button>

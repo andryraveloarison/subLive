@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { fetchLeaderboard, dbReady } from '../lib/supabase.js'
 
 // Classement Dashikara (meilleur score) — lit Supabase. Affiche « Pseudo (appareil) ».
-export default function Leaderboard({ limit = 10, title = 'CLASSEMENT · MEILLEUR SCORE', refreshKey }) {
+export default function Leaderboard({ limit = 10, title = 'CLASSEMENT · POINTS GAGNÉS', refreshKey }) {
   const [rows, setRows] = useState(null)
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export default function Leaderboard({ limit = 10, title = 'CLASSEMENT · MEILLEU
           <div key={r.pseudo + '·' + r.device} className={`lb__row${i === 0 ? ' lb__row--lead' : ''}`}>
             <span className="lb__pos">{i + 1}</span>
             <span className="lb__name">{r.pseudo} <i>({r.device})</i></span>
-            <span className="lb__score">{Number(r.best_score).toLocaleString('fr-FR')}</span>
+            <span className="lb__score">🪙 {Number(r.best_score).toLocaleString('fr-FR')}</span>
           </div>
         ))
       )}

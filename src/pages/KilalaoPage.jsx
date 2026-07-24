@@ -58,25 +58,25 @@ export default function KilalaoPage() {
     <div className="kila" style={{ '--accent': g.color }}>
       <div className="kila__ambient" />
 
+      {/* Artwork pleine hauteur du jeu sélectionné (fondu sur tous les bords) */}
+      <div
+        key={g.id}
+        className={`kila__art${g.image ? '' : ' kila__art--emoji'}`}
+        style={g.image ? { backgroundImage: `url(${g.image})` } : undefined}
+      >
+        {!g.image && <span>{g.emoji}</span>}
+      </div>
+      <div className="kila__art-scrim" />
+
       {/* Barre du haut */}
       <header className="kila__nav">
         <span className="kila__brand">KILALAO</span>
-        <span className="kila__nav-links">
-          <span className="kila__nav-link is-active">Jeux</span>
-        </span>
         {device && <span className="kila__user">👤 {device}</span>}
       </header>
 
       {/* Héros du jeu sélectionné */}
-      <section className="kila__hero" key={g.id}>
-        <div
-          className={`kila__hero-art${g.image ? '' : ' kila__hero-art--emoji'}`}
-          style={g.image ? { backgroundImage: `url(${g.image})` } : undefined}
-        >
-          {!g.image && <span>{g.emoji}</span>}
-        </div>
-        <div className="kila__hero-scrim" />
-        <div className="kila__hero-content">
+      <section className="kila__hero">
+        <div className="kila__hero-content" key={g.id}>
           <span className="kila__kicker">{g.emoji} {g.subtitle}</span>
           <h1 className="kila__hero-title">{g.title}</h1>
           <p className="kila__hero-desc">{g.desc}</p>
@@ -88,7 +88,7 @@ export default function KilalaoPage() {
 
       {/* Carrousel des jeux */}
       <section className="kila__row">
-        <div className="kila__row-title">Tes jeux</div>
+        <div className="kila__row-title">Jeux disponibles</div>
         <div className="kila__carousel">
           {GAMES.map((game, i) => (
             <button

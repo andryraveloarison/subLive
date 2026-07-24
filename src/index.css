@@ -875,9 +875,6 @@ canvas {
   padding: 20px 40px;
 }
 .kila__brand { font-size: 24px; font-weight: 900; letter-spacing: 0.32em; color: #fff; }
-.kila__nav-links { display: flex; gap: 20px; }
-.kila__nav-link { font-size: 14px; letter-spacing: 1px; color: rgba(255,255,255,0.5); }
-.kila__nav-link.is-active { color: #fff; }
 .kila__user {
   margin-left: auto; font-size: 13px; letter-spacing: 0.5px;
   color: rgba(255,255,255,0.75);
@@ -885,33 +882,42 @@ canvas {
   padding: 6px 14px; border-radius: 999px;
 }
 
-/* Héros */
+/* Artwork pleine hauteur (couche de fond, derrière nav + héros + carrousel).
+   Fondu large sur le bord gauche via mask → aucun bord vertical net, même si
+   l'image a un fond uni. Les fondus haut/bas sont assurés par le scrim. */
+.kila__art {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 72%;
+  z-index: 0; pointer-events: none;
+  background-size: cover; background-position: center top;
+  -webkit-mask-image: linear-gradient(to left, #000 38%, transparent 96%);
+          mask-image: linear-gradient(to left, #000 38%, transparent 96%);
+  animation: kilaArt 0.6s ease;
+}
+@keyframes kilaArt { from { opacity: 0; transform: scale(1.04); } to { opacity: 1; transform: scale(1); } }
+.kila__art--emoji {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30vh; filter: drop-shadow(0 20px 40px rgba(0,0,0,0.5));
+  background: radial-gradient(circle at 60% 40%, color-mix(in srgb, var(--accent) 34%, transparent) 0%, transparent 62%);
+}
+/* Scrim : fond sombre qui reprend le dessus en bas (rangée), à gauche (texte)
+   et en haut (nav) — toutes les transitions sont des dégradés longs, sans seam. */
+.kila__art-scrim {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    linear-gradient(90deg, #05070d 16%, rgba(5,7,13,0.72) 40%, transparent 74%),
+    linear-gradient(0deg, #05070d 20%, rgba(5,7,13,0.55) 36%, transparent 62%),
+    linear-gradient(180deg, rgba(5,7,13,0.85) 0%, transparent 22%);
+}
+
+/* Héros (texte uniquement, l'art est en couche de fond) */
 .kila__hero {
   position: relative; z-index: 1; flex: 1; min-height: 0;
   display: flex; align-items: flex-end;
-  padding: 0 56px 20px;
-  animation: kilaFade 0.45s ease;
+  padding: 0 56px 26px;
 }
-@keyframes kilaFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes kilaFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-.kila__hero-art {
-  position: absolute; top: 0; right: 0; bottom: 0; width: 62%;
-  background-size: cover; background-position: center;
-  -webkit-mask-image: linear-gradient(to left, #000 45%, transparent 92%);
-          mask-image: linear-gradient(to left, #000 45%, transparent 92%);
-}
-.kila__hero-art--emoji {
-  display: flex; align-items: center; justify-content: center;
-  font-size: 22vh; filter: drop-shadow(0 20px 40px rgba(0,0,0,0.5));
-  background: radial-gradient(circle at 60% 45%, color-mix(in srgb, var(--accent) 30%, transparent) 0%, transparent 60%);
-}
-.kila__hero-scrim {
-  position: absolute; inset: 0; pointer-events: none;
-  background:
-    linear-gradient(90deg, #05070d 12%, rgba(5,7,13,0.65) 42%, transparent 72%),
-    linear-gradient(0deg, #05070d 2%, transparent 40%);
-}
-.kila__hero-content { position: relative; max-width: 560px; }
+.kila__hero-content { position: relative; max-width: 580px; animation: kilaFade 0.4s ease; }
 .kila__kicker {
   display: inline-block; font-size: 13px; letter-spacing: 4px; text-transform: uppercase;
   color: var(--accent); font-weight: 700; margin-bottom: 10px;
@@ -944,7 +950,10 @@ canvas {
   color: rgba(255,255,255,0.82); margin-bottom: 12px;
 }
 .kila__carousel {
-  display: flex; gap: 16px; overflow-x: auto; padding: 6px 2px 14px;
+  display: flex; gap: 16px; overflow-x: auto;
+  /* le padding-top doit couvrir TOUT le débordement du poster agrandi
+     (scale + translateY), sinon la zone de défilement rogne le haut */
+  padding: 22px 12px 16px; margin: -14px -12px 0;
   scrollbar-width: thin;
 }
 .kila__poster {
@@ -965,7 +974,7 @@ canvas {
   display: flex; align-items: center; justify-content: center; font-size: 68px;
   background-image: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--accent) 45%, #10131c) 0%, #0b0e16 75%);
 }
-.kila__poster--sel { transform: translateY(-6px) scale(1.05); }
+.kila__poster--sel { transform: translateY(-4px) scale(1.04); }
 .kila__poster--sel .kila__poster-art {
   border-color: #fff;
   box-shadow: 0 12px 34px color-mix(in srgb, var(--accent) 55%, transparent);
@@ -981,8 +990,8 @@ canvas {
 }
 
 @media (max-width: 720px) {
-  .kila__hero { padding: 0 24px 12px; }
-  .kila__hero-art { width: 100%; -webkit-mask-image: linear-gradient(to top, transparent 8%, #000 60%); mask-image: linear-gradient(to top, transparent 8%, #000 60%); }
+  .kila__hero { padding: 0 24px 16px; }
+  .kila__art { width: 100%; -webkit-mask-image: linear-gradient(to top, transparent 6%, #000 55%); mask-image: linear-gradient(to top, transparent 6%, #000 55%); }
   .kila__row, .kila__nav { padding-left: 24px; padding-right: 24px; }
 }
 
