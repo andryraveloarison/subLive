@@ -851,85 +851,139 @@ canvas {
 }
 .home-btn:active { transform: scale(0.95); }
 
-/* ─── KILALAO — Page de sélection du jeu ─── */
-.kilalao {
-  position: fixed; inset: 0;
+/* ─── KILALAO — Sélection du jeu (style plateforme de streaming) ─── */
+.kila {
+  position: fixed; inset: 0; overflow: hidden;
   display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 32px; overflow: hidden;
-  font-family: inherit;
-  background: #0a0a12;
+  font-family: inherit; color: #fff;
+  background: #05070d;
+}
+/* Halo d'ambiance teinté par le jeu sélectionné (transition douce) */
+.kila__ambient {
+  position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(120% 90% at 78% 12%, color-mix(in srgb, var(--accent) 42%, transparent) 0%, transparent 55%),
+    radial-gradient(90% 80% at 12% 90%, color-mix(in srgb, var(--accent) 18%, transparent) 0%, transparent 60%),
+    linear-gradient(180deg, #060811 0%, #05070d 100%);
+  transition: background 0.5s ease;
 }
 
-.kilalao__bg {
-  position: absolute; inset: 0;
-  background: radial-gradient(ellipse at 30% 60%, #1a3a6a 0%, transparent 55%),
-              radial-gradient(ellipse at 70% 40%, #1a4a1a 0%, transparent 55%);
-  pointer-events: none;
+/* Barre du haut */
+.kila__nav {
+  position: relative; z-index: 3;
+  display: flex; align-items: center; gap: 26px;
+  padding: 20px 40px;
+}
+.kila__brand { font-size: 24px; font-weight: 900; letter-spacing: 0.32em; color: #fff; }
+.kila__nav-links { display: flex; gap: 20px; }
+.kila__nav-link { font-size: 14px; letter-spacing: 1px; color: rgba(255,255,255,0.5); }
+.kila__nav-link.is-active { color: #fff; }
+.kila__user {
+  margin-left: auto; font-size: 13px; letter-spacing: 0.5px;
+  color: rgba(255,255,255,0.75);
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+  padding: 6px 14px; border-radius: 999px;
 }
 
-.kilalao__header { text-align: center; position: relative; z-index: 1; }
+/* Héros */
+.kila__hero {
+  position: relative; z-index: 1; flex: 1; min-height: 0;
+  display: flex; align-items: flex-end;
+  padding: 0 56px 20px;
+  animation: kilaFade 0.45s ease;
+}
+@keyframes kilaFade { from { opacity: 0; } to { opacity: 1; } }
 
-.kilalao__title {
-  margin: 0; font-size: clamp(42px, 8vw, 80px);
-  font-weight: 900; letter-spacing: 0.18em;
-  color: #fff;
-  text-shadow: 0 0 40px rgba(255,255,255,0.25);
+.kila__hero-art {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 62%;
+  background-size: cover; background-position: center;
+  -webkit-mask-image: linear-gradient(to left, #000 45%, transparent 92%);
+          mask-image: linear-gradient(to left, #000 45%, transparent 92%);
 }
+.kila__hero-art--emoji {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22vh; filter: drop-shadow(0 20px 40px rgba(0,0,0,0.5));
+  background: radial-gradient(circle at 60% 45%, color-mix(in srgb, var(--accent) 30%, transparent) 0%, transparent 60%);
+}
+.kila__hero-scrim {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(90deg, #05070d 12%, rgba(5,7,13,0.65) 42%, transparent 72%),
+    linear-gradient(0deg, #05070d 2%, transparent 40%);
+}
+.kila__hero-content { position: relative; max-width: 560px; }
+.kila__kicker {
+  display: inline-block; font-size: 13px; letter-spacing: 4px; text-transform: uppercase;
+  color: var(--accent); font-weight: 700; margin-bottom: 10px;
+}
+.kila__hero-title {
+  margin: 0; font-size: clamp(44px, 7vw, 88px); font-weight: 900; line-height: 0.98;
+  letter-spacing: 1px; text-shadow: 0 6px 30px rgba(0,0,0,0.6);
+}
+.kila__hero-desc {
+  margin: 16px 0 22px; font-size: 16px; line-height: 1.55;
+  color: rgba(255,255,255,0.72); max-width: 480px;
+}
+.kila__hero-actions { display: flex; gap: 14px; }
+.kila__play {
+  font-family: inherit; cursor: pointer; border: none;
+  font-size: 17px; font-weight: 800; letter-spacing: 0.5px;
+  padding: 14px 34px; border-radius: 10px; color: #05070d;
+  background: #fff; transition: transform 0.12s, box-shadow 0.15s;
+}
+.kila__play:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.kila__play:active { transform: translateY(0); }
 
-.kilalao__tagline {
-  margin: 6px 0 0; font-size: 14px; letter-spacing: 4px;
-  text-transform: uppercase; color: rgba(255,255,255,0.4);
+/* Rangée / carrousel */
+.kila__row { position: relative; z-index: 2; padding: 0 40px 8px; }
+.kila__row-title {
+  font-size: 15px; letter-spacing: 1px; font-weight: 700;
+  color: rgba(255,255,255,0.82); margin-bottom: 12px;
 }
+.kila__carousel {
+  display: flex; gap: 16px; overflow-x: auto; padding: 6px 2px 14px;
+  scrollbar-width: thin;
+}
+.kila__poster {
+  flex: 0 0 auto; width: 150px; cursor: pointer;
+  background: none; border: none; padding: 0; font-family: inherit;
+  text-align: left; color: #fff;
+  transition: transform 0.18s;
+}
+.kila__poster-art {
+  width: 150px; height: 200px; border-radius: 12px;
+  background-size: cover; background-position: center;
+  border: 2px solid transparent;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.45);
+  transition: border-color 0.18s, box-shadow 0.18s;
+  background-color: #10131c;
+}
+.kila__poster-art--emoji {
+  display: flex; align-items: center; justify-content: center; font-size: 68px;
+  background-image: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--accent) 45%, #10131c) 0%, #0b0e16 75%);
+}
+.kila__poster--sel { transform: translateY(-6px) scale(1.05); }
+.kila__poster--sel .kila__poster-art {
+  border-color: #fff;
+  box-shadow: 0 12px 34px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.kila__poster-cap { margin-top: 10px; }
+.kila__poster-name { display: block; font-size: 15px; font-weight: 800; }
+.kila__poster-sub { display: block; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,0.45); }
 
-.kilalao__cards {
-  display: flex; gap: 24px; flex-wrap: wrap;
-  justify-content: center; position: relative; z-index: 1;
-}
-
-.kilalao__card {
-  width: clamp(220px, 30vw, 300px);
-  padding: 28px 24px 22px;
-  border-radius: 18px;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.04);
-  cursor: pointer; text-align: center;
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
-  font-family: inherit;
-  color: rgba(255,255,255,0.7);
-}
-.kilalao__card--sel {
-  border-color: var(--accent);
-  background: rgba(255,255,255,0.07);
-  box-shadow: 0 0 32px color-mix(in srgb, var(--accent) 35%, transparent);
-  transform: translateY(-4px);
-}
-.kilalao__card:hover { transform: translateY(-4px); }
-
-.kilalao__emoji { font-size: 42px; line-height: 1; }
-.kilalao__gname {
-  font-size: 22px; font-weight: 800; letter-spacing: 2px;
-  color: var(--accent);
-}
-.kilalao__gsub {
+.kila__hint {
+  position: relative; z-index: 2; text-align: center;
   font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
-  color: rgba(255,255,255,0.4);
+  color: rgba(255,255,255,0.28); padding: 4px 0 14px; margin: 0;
 }
-.kilalao__gdesc {
-  font-size: 13px; line-height: 1.5; color: rgba(255,255,255,0.55);
-  margin-top: 4px;
-}
-.kilalao__cta {
-  margin-top: 10px; font-size: 12px; letter-spacing: 2px;
-  color: var(--accent); opacity: 0;
-  transition: opacity 0.15s;
-}
-.kilalao__card--sel .kilalao__cta { opacity: 1; }
 
-.kilalao__hint {
-  font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
-  color: rgba(255,255,255,0.25); position: relative; z-index: 1;
+@media (max-width: 720px) {
+  .kila__hero { padding: 0 24px 12px; }
+  .kila__hero-art { width: 100%; -webkit-mask-image: linear-gradient(to top, transparent 8%, #000 60%); mask-image: linear-gradient(to top, transparent 8%, #000 60%); }
+  .kila__row, .kila__nav { padding-left: 24px; padding-right: 24px; }
 }
 
 /* ─── PENOPENO — Jeu de tirs au but ─── */

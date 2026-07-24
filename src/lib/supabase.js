@@ -42,3 +42,5 @@ export async function fetchLeaderboard(limit = 10) {
     return data || []
   } catch (e) { console.warn('[supabase] fetchLeaderboard', e); return [] }
 }
+
+if (import.meta.env.DEV) window.__db = { submitScore, fetchLeaderboard, dbReady }
