@@ -25,7 +25,7 @@ export default function Leaderboard({ limit = 10, title = 'CLASSEMENT · POINTS 
         rows.map((r, i) => (
           <div key={r.pseudo + '·' + r.device} className={`lb__row${i === 0 ? ' lb__row--lead' : ''}`}>
             <span className="lb__pos">{i + 1}</span>
-            <span className="lb__name">{r.pseudo} <i>({r.device})</i></span>
+            <span className="lb__name">{r.device} <i>({r.pseudo})</i></span>
             <span className="lb__score">🪙 {Number(r.best_score).toLocaleString('fr-FR')}</span>
           </div>
         ))
