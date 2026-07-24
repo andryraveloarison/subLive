@@ -1,0 +1,16 @@
+# Dépendances & build (Vercel les régénère : npm install + vite build)
+node_modules/
+dist/
+.vercel/
+
+# Logs & divers
+*.log
+.DS_Store
+.env
+.env.*
+
+# Gros fichiers NON utilisés par le jeu (sauvegardes + modèles non référencés)
+public/_orig_backup/
+public/car.glb
+public/rigged-model.glb
+public/perso3.glb

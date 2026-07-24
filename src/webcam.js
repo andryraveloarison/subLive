@@ -28,8 +28,11 @@ export class PoseController {
   async start() {
     this.cb.onStatus?.('Chargement du modèle…')
     const vision = await FilesetResolver.forVisionTasks(WASM)
+    // Délégué CPU (et non GPU) : évite un 2e contexte WebGL qui entre en conflit
+    // avec le rendu 3D du jeu (Three.js) et provoquait un « écran noir » par
+    // moments. Le modèle « lite » reste assez rapide sur CPU pour les gestes.
     this.landmarker = await PoseLandmarker.createFromOptions(vision, {
-      baseOptions: { modelAssetPath: MODEL, delegate: 'GPU' },
+      baseOptions: { modelAssetPath: MODEL, delegate: 'CPU' },
       runningMode: 'VIDEO',
       numPoses: 1,
     })
