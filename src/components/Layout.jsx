@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { PoseController } from '../webcam.js'
+import { submitScore } from '../lib/supabase.js'
+import { getDevice } from '../lib/profile.js'
 import { useGame } from '../hooks/useGame.js'
 import { CHARACTERS } from '../data/characters.js'
 import { GameContext } from '../context/GameContext.js'
@@ -74,6 +76,8 @@ export default function Layout() {
 
   // Fin d'un run : solo (meilleur score) ou match (tours + classement).
   endRunRef.current = (finalScore, finalCoins) => {
+    // Classement Supabase : meilleur score par (pseudo du jeu, appareil).
+    submitScore(names[turnIdx] || `Joueur ${turnIdx + 1}`, getDevice(), finalScore)
     if (!isMatch) {
       if (finalScore > best) { setBest(finalScore); localStorage.setItem('dashikara_best', String(finalScore)) }
       go('/over')

@@ -1628,3 +1628,63 @@ canvas {
   border-radius: 50%; background: #fff; transition: left 0.15s;
 }
 .rctrl__switch--on .rctrl__switch-knob { left: 29px; }
+
+/* ══════════════════════════════════════════════════════════
+   Base de données : porte d'entrée (nom d'appareil) + classement
+══════════════════════════════════════════════════════════ */
+.devgate {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at 50% 0%, #12203a 0%, #060912 75%);
+  color: #fff; font-family: 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+  padding: 24px;
+}
+.devgate__box {
+  width: min(440px, 92vw); text-align: center;
+  background: rgba(8,12,24,0.7); backdrop-filter: blur(10px);
+  border: 1px solid rgba(0,229,255,0.3); border-radius: 20px;
+  padding: 34px 28px; box-shadow: 0 0 50px rgba(0,229,255,0.18);
+}
+.devgate__logo { font-size: 52px; }
+.devgate__title { font-size: 26px; font-weight: 900; letter-spacing: 1px; margin: 8px 0 6px; }
+.devgate__sub { font-size: 14px; color: rgba(255,255,255,0.65); margin-bottom: 20px; line-height: 1.4; }
+.devgate__input {
+  width: 100%; box-sizing: border-box; padding: 14px 16px; font-size: 18px;
+  text-align: center; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.06); color: #fff; outline: none; margin-bottom: 16px;
+}
+.devgate__input:focus { border-color: var(--neon-cyan); box-shadow: 0 0 18px rgba(0,229,255,0.35); }
+.devgate__btn {
+  width: 100%; padding: 14px; font-size: 17px; font-weight: 800; letter-spacing: 1px;
+  border: none; border-radius: 12px; cursor: pointer; color: #021018;
+  background: linear-gradient(135deg, #00e5ff, #2979ff);
+}
+.devgate__btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Classement (leaderboard) */
+.lb {
+  min-width: 300px; max-width: 420px; margin: 14px auto;
+  background: rgba(4,8,18,0.6); border: 1px solid rgba(0,229,255,0.25);
+  border-radius: 14px; padding: 12px 16px; text-align: left;
+}
+.lb__title { font-size: 12px; letter-spacing: 2px; color: rgba(255,255,255,0.55); margin-bottom: 8px; text-align: center; }
+.lb__empty { font-size: 14px; color: rgba(255,255,255,0.45); font-style: italic; text-align: center; padding: 6px 0; }
+.lb__row {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 16px; font-weight: 700; padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.lb__row:last-child { border-bottom: none; }
+.lb__row--lead { text-shadow: 0 0 12px rgba(255,204,51,0.4); }
+.lb__row--lead .lb__pos { color: #ffcc33; }
+.lb__pos { width: 24px; text-align: center; font-style: italic; font-weight: 900; color: var(--neon-cyan); flex: none; }
+.lb__name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb__name i { font-style: normal; font-size: 12px; opacity: 0.55; }
+.lb__score { font-weight: 900; font-variant-numeric: tabular-nums; color: #ffd54a; }
+
+/* Panneau classement sur le menu Dashikara */
+.zelda__leaderboard {
+  position: absolute; top: 90px; right: 26px; z-index: 4;
+  width: 320px; max-width: 34vw;
+}
+@media (max-width: 820px) { .zelda__leaderboard { display: none; } }

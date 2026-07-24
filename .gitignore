@@ -7,7 +7,9 @@ dist/
 *.log
 .DS_Store
 .env
-.env.*
+.env.local
+.env.*.local
+!.env.example
 
 # Gros fichiers NON utilisés par le jeu (sauvegardes + modèles non référencés)
 public/_orig_backup/

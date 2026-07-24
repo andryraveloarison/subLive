@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import DeviceGate from './components/DeviceGate.jsx'
 import Layout from './components/Layout.jsx'
 import KilalaoPage from './pages/KilalaoPage.jsx'
 import IntroPage from './pages/IntroPage.jsx'
@@ -15,6 +16,7 @@ import RallyeControllerPage from './pages/RallyeControllerPage.jsx'
 
 export default function App() {
   return (
+    <DeviceGate>
     <Routes>
       {/* Sélection du jeu — standalone (pas de canvas 3D Dashikara) */}
       <Route path="/" element={<KilalaoPage />} />
@@ -42,5 +44,6 @@ export default function App() {
         <Route path="*"         element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
+    </DeviceGate>
   )
 }

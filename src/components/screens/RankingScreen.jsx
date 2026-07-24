@@ -1,3 +1,5 @@
+import Leaderboard from '../Leaderboard.jsx'
+
 // Classement de fin de manche (trié par total de pièces).
 export default function RankingScreen({ round, ranking, pName, lastCoins, onNext, onEnd, onQuit }) {
   return (
@@ -25,7 +27,8 @@ export default function RankingScreen({ round, ranking, pName, lastCoins, onNext
           ))}
         </tbody>
       </table>
-      <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+      <Leaderboard limit={8} title="CLASSEMENT EN LIGNE · MEILLEUR SCORE" />
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 16 }}>
         <button className="btn" onClick={onNext}>Manche {round + 1} ▶</button>
         <button className="btn ghost" onClick={onEnd}>Terminer</button>
         <button className="btn ghost" onClick={onQuit}>Quitter</button>
