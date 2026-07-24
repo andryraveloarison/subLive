@@ -23,10 +23,24 @@ export default function Layout() {
   const [transit, setTransit] = useState(null)    // null | 'out' | 'in'
   const [score, setScore] = useState(0)
   const [coins, setCoins] = useState(0)
-  const [best, setBest] = useState(() => Number(localStorage.getItem('dashikara_best') || 0))
+  // Meilleur = meilleures PIÈCES gagnées en une partie (aligné sur le classement
+  // en ligne). Nouvelle clé : l'ancienne (dashikara_best) était en score-distance.
+  const [best, setBest] = useState(() => Number(localStorage.getItem('dashikara_best_coins') || 0))
   const [power, setPower] = useState({ magnet: false, boots: false })
   const [cam, setCam] = useState('off')
   const [camMsg, setCamMsg] = useState('')
+  const [camHidden, setCamHidden] = useState(false)   // aperçu masqué en jeu (mobile)
+
+  // Sur MOBILE : masque l'aperçu webcam 2 s après le début de la partie
+  // (il prend trop de place à l'écran) — le flux reste actif pour les gestes.
+  useEffect(() => {
+    const mobile = window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 820
+    if (location.pathname === '/play' && mobile) {
+      const t = setTimeout(() => setCamHidden(true), 2000)
+      return () => clearTimeout(t)
+    }
+    setCamHidden(false)
+  }, [location.pathname])
 
   // match / personnages
   const [isMatch, setIsMatch] = useState(false)
@@ -80,7 +94,7 @@ export default function Layout() {
     // par (pseudo du jeu, appareil) — pas le score de distance.
     submitScore(names[turnIdx] || `Joueur ${turnIdx + 1}`, getDevice(), finalCoins)
     if (!isMatch) {
-      if (finalScore > best) { setBest(finalScore); localStorage.setItem('dashikara_best', String(finalScore)) }
+      if (finalCoins > best) { setBest(finalCoins); localStorage.setItem('dashikara_best_coins', String(finalCoins)) }
       go('/over')
       return
     }
@@ -171,7 +185,9 @@ export default function Layout() {
     <GameContext.Provider value={value}>
       <div className="app">
         <canvas ref={canvasRef} />
-        <WebcamPreview cam={cam} videoRef={videoRef} />
+        <WebcamPreview cam={cam} videoRef={videoRef} hidden={camHidden} />
+        {/* Pas sur /setup : chevauche le sélecteur « Joueurs » du match */}
+        {getDevice() && location.pathname !== '/setup' && <span className="device-chip">👤 {getDevice()}</span>}
         {showHome && (
           <button className="home-btn" onClick={goMenu} title="Retour au menu">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

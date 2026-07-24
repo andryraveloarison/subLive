@@ -5,7 +5,7 @@ export default function RankingScreen({ round, ranking, pName, lastCoins, onNext
   return (
     <div className="overlay">
       <h2>Classement — fin de la manche {round}</h2>
-      <table style={{ borderCollapse: 'collapse', margin: '14px auto 22px', minWidth: 440, fontSize: '1.5rem' }}>
+      <table className="rank-table" style={{ borderCollapse: 'collapse', margin: '14px auto 22px', minWidth: 440, fontSize: '1.5rem' }}>
         <thead>
           <tr style={{ opacity: 0.7 }}>
             <th style={{ padding: '8px 18px', textAlign: 'left' }}>#</th>
@@ -27,8 +27,8 @@ export default function RankingScreen({ round, ranking, pName, lastCoins, onNext
           ))}
         </tbody>
       </table>
-      <Leaderboard limit={8} title="CLASSEMENT EN LIGNE · POINTS GAGNÉS" />
-      <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 16 }}>
+      <Leaderboard limit={10} title="CLASSEMENT EN LIGNE · POINTS GAGNÉS" />
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 16, flexWrap: 'wrap' }}>
         <button className="btn" onClick={onNext}>Manche {round + 1} ▶</button>
         <button className="btn ghost" onClick={onEnd}>Terminer</button>
         <button className="btn ghost" onClick={onQuit}>Quitter</button>

@@ -46,7 +46,7 @@ export default function MenuPage() {
       </header>
 
       <aside className="zelda__leaderboard">
-        <Leaderboard limit={8} />
+        <Leaderboard limit={10} />
       </aside>
 
       <nav className="zelda__menu">
@@ -66,7 +66,7 @@ export default function MenuPage() {
       </nav>
 
       <footer className="zelda__foot">
-        <span className="zelda__best">{best > 0 ? `Meilleur : ${best.toLocaleString('fr-FR')}` : 'by nananjy'}</span>
+        <span className="zelda__best">{best > 0 ? `Meilleur : 🪙 ${best.toLocaleString('fr-FR')}` : 'by nananjy'}</span>
         <span className="zelda__keys">↑ ↓ choisir · Entrée valider</span>
         {camMsg ? <span className="zelda__cammsg">{camMsg}</span> : <span />}
       </footer>

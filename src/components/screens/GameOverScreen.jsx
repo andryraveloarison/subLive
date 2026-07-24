@@ -6,9 +6,9 @@ export default function GameOverScreen({ score, coins, best, onReplay, onMenu, o
     <div className="overlay">
       <h2>Perdu !</h2>
       <p className="final">Score : {score.toLocaleString('fr-FR')} · 🪙 {coins}</p>
-      <p className="final">Meilleur : {best.toLocaleString('fr-FR')}</p>
-      <Leaderboard limit={8} />
-      <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+      <p className="final">Meilleur : 🪙 {best.toLocaleString('fr-FR')}</p>
+      <Leaderboard limit={10} />
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
         <button className="btn" onClick={onReplay}>Rejouer ↻</button>
         <button className="btn ghost" onClick={onMenu}>Menu</button>
         <button className="btn ghost" onClick={onQuit}>Quitter</button>
