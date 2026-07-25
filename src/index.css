@@ -881,6 +881,30 @@ canvas {
 }
 .home-btn:active { transform: scale(0.95); }
 
+/* Bouton musique (couper / activer) pendant la partie — bas à gauche */
+.music-btn {
+  position: fixed;
+  bottom: 14px;
+  left: 14px;
+  z-index: 999;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(6px);
+  color: rgba(255,255,255,0.8);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  transition: background 0.15s, color 0.15s, transform 0.1s;
+}
+.music-btn svg { width: 22px; height: 22px; }
+.music-btn:hover { background: rgba(255,255,255,0.15); color: #fff; transform: scale(1.08); }
+.music-btn:active { transform: scale(0.95); }
+.music-btn[aria-label^="Activer"] { color: rgba(255,255,255,0.45); }
+
 /* ─── KILALAO — Sélection du jeu (style plateforme de streaming) ─── */
 .kila {
   position: fixed; inset: 0; overflow: hidden;
@@ -1975,3 +1999,55 @@ canvas {
 /* Couronne du 1er au classement */
 .lb__crown, .datax__crown { margin-right: 5px; filter: drop-shadow(0 0 6px rgba(255,204,51,0.6)); }
 .datax__period { font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 8px; }
+
+/* Barres par joueur (courbe repliée sur un seul intervalle) : libellés plus larges */
+.datax__bars--players .datax__bar-lbl { width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ─── Modal d'activation webcam (menu Dashikara) ─── */
+.cammodal {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  background: rgba(6, 8, 14, 0.82); backdrop-filter: blur(8px);
+  animation: camFade 0.25s ease;
+}
+@keyframes camFade { from { opacity: 0; } to { opacity: 1; } }
+.cammodal__box {
+  width: min(440px, 94vw); text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  background: rgba(20, 16, 12, 0.9);
+  border: 1px solid rgba(245, 166, 35, 0.35);
+  border-radius: 20px; padding: 34px 30px;
+  box-shadow: 0 0 60px rgba(245, 166, 35, 0.18);
+  color: var(--mg-cream);
+}
+.cammodal__icon { font-size: 46px; line-height: 1; }
+.cammodal__spinner {
+  width: 46px; height: 46px; border-radius: 50%;
+  border: 4px solid rgba(245, 166, 35, 0.2);
+  border-top-color: var(--mg-gold);
+  animation: camSpin 0.9s linear infinite;
+}
+@keyframes camSpin { to { transform: rotate(360deg); } }
+.cammodal__title { font-size: 22px; font-weight: 800; letter-spacing: 0.5px; margin: 0; }
+.cammodal__instr {
+  font-size: 15px; line-height: 1.55; margin: 0;
+  color: rgba(247, 230, 196, 0.85);
+  font-family: 'Trebuchet MS', system-ui, sans-serif;
+}
+.cammodal__instr b { color: var(--mg-gold); font-weight: 800; }
+.cammodal__msg { font-size: 13px; color: rgba(247, 230, 196, 0.55); margin: 0; }
+.cammodal__actions { display: flex; gap: 12px; }
+.cammodal__btn {
+  font: inherit; font-size: 16px; font-weight: 800; letter-spacing: 0.5px;
+  color: #201400; cursor: pointer; border: none; border-radius: 12px;
+  padding: 12px 26px;
+  background: linear-gradient(135deg, var(--mg-gold), var(--mg-orange));
+}
+.cammodal__btn--ghost {
+  background: transparent; color: rgba(247, 230, 196, 0.7);
+  border: 1px solid rgba(247, 230, 196, 0.25);
+}
+
+/* Top 3 des joueurs les plus actifs — médailles */
+.datax__rank-medal { width: 24px; text-align: center; font-size: 18px; flex: none; }
+.datax__chart-val { fill: rgba(255,255,255,0.85); font-size: 12px; font-weight: 700; }

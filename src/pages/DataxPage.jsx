@@ -11,7 +11,7 @@ const AUTH_KEY = 'datax.auth'
 
 const GAME_LABELS = { dashikara: 'Dashikara', penopeno: 'Penopeno', rallye: '2Rally' }
 const GAME_COLORS = { dashikara: '#f5a623', penopeno: '#4caf50', rallye: '#e53935' }
-const LINE_COLORS = ['#00e5ff', '#f5a623', '#ff5da2', '#8bc34a', '#b388ff', '#ffca28']
+const MEDALS = ['🥇', '🥈', '🥉']
 
 // ─── Buckets temporels ───
 const startOfWeek = (d) => {
@@ -20,10 +20,13 @@ const startOfWeek = (d) => {
   x.setDate(x.getDate() - ((x.getDay() + 6) % 7))   // ramène au lundi
   return x
 }
+const dayKey   = (d) => { const x = new Date(d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}` }
 const weekKey  = (d) => startOfWeek(d).toISOString().slice(0, 10)
 const monthKey = (d) => { const x = new Date(d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}` }
+const yearKey  = (d) => String(new Date(d).getFullYear())
 
-const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
+const MOIS  = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
+const JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
 const weekLabel  = (k) => { const d = new Date(k); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}` }
 const monthLabel = (k) => { const [y, m] = k.split('-'); return `${MOIS[Number(m) - 1]} ${y.slice(2)}` }
 // Libellés complets (avec l'année) pour les info-bulles et la période affichée.
@@ -71,7 +74,7 @@ function Dashboard({ onExit }) {
   const [dashPlays, setDashPlays] = useState(null)
   const [ranking, setRanking] = useState(null)
   const [players, setPlayers] = useState(null)        // nb total de joueurs Dashikara
-  const [scale, setScale] = useState('week')          // 'week' | 'month'
+  const [scale, setScale] = useState('days')          // 'days' | 'weeks' | 'months' | 'years'
 
   useEffect(() => {
     let on = true
@@ -99,33 +102,49 @@ function Dashboard({ onExit }) {
     return dashPlays.filter(p => new Date(p.played_at) >= t0).length
   }, [dashPlays])
 
-  // Séries « parties par joueur » (Dashikara), bucketées par semaine ou par mois.
+  // Courbe du TOTAL de parties Dashikara lancées par période (pas par joueur).
+  // 'days' = les 7 jours de la semaine en cours ; sinon buckets par semaine/mois/année.
   const chart = useMemo(() => {
     if (!dashPlays || dashPlays.length === 0) return null
-    const keyOf   = scale === 'week' ? weekKey : monthKey
-    const labelOf = scale === 'week' ? weekLabel : monthLabel
-    const fullOf  = scale === 'week' ? weekFull : monthFull
-    const playerOf = (p) => (p.device || p.pseudo || 'Anonyme')
-
-    const buckets = [...new Set(dashPlays.map(p => keyOf(p.played_at)))].sort()
-    const totals = {}                                   // parties totales par joueur
-    const grid = {}                                     // joueur → { bucket → n }
-    for (const p of dashPlays) {
-      const who = playerOf(p), b = keyOf(p.played_at)
-      totals[who] = (totals[who] || 0) + 1
-      ;(grid[who] ||= {})[b] = (grid[who]?.[b] || 0) + 1
+    const countBy = (keyOf) => {
+      const c = {}
+      for (const p of dashPlays) { const k = keyOf(p.played_at); c[k] = (c[k] || 0) + 1 }
+      return c
     }
-    const topPlayers = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([w]) => w)
-    const series = topPlayers.map((who, i) => ({
-      name: who,
-      color: LINE_COLORS[i % LINE_COLORS.length],
-      values: buckets.map(b => grid[who]?.[b] || 0),
-    }))
-    const labels = buckets.map(labelOf)
-    const fullLabels = buckets.map(fullOf)
-    const period = buckets.length ? `${fullOf(buckets[0])} → ${fullOf(buckets[buckets.length - 1])}` : ''
-    return { buckets, labels, fullLabels, period, series, hidden: Object.keys(totals).length - topPlayers.length }
+
+    let buckets, labels, fullLabels
+    if (scale === 'days') {
+      const monday = startOfWeek(new Date())
+      const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(monday); d.setDate(monday.getDate() + i); return d })
+      buckets = days.map(dayKey)
+      labels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+      fullLabels = days.map((d, i) => `${JOURS[i]} ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`)
+    } else if (scale === 'weeks') {
+      buckets = [...new Set(dashPlays.map(p => weekKey(p.played_at)))].sort()
+      labels = buckets.map(weekLabel); fullLabels = buckets.map(weekFull)
+    } else if (scale === 'years') {
+      buckets = [...new Set(dashPlays.map(p => yearKey(p.played_at)))].sort()
+      labels = buckets.slice(); fullLabels = buckets.map(y => `Année ${y}`)
+    } else { // months
+      buckets = [...new Set(dashPlays.map(p => monthKey(p.played_at)))].sort()
+      labels = buckets.map(monthLabel); fullLabels = buckets.map(monthFull)
+    }
+
+    const keyOf = scale === 'days' ? dayKey : scale === 'weeks' ? weekKey : scale === 'years' ? yearKey : monthKey
+    const counts = countBy(keyOf)
+    const values = buckets.map(b => counts[b] || 0)
+    const period = fullLabels.length ? `${fullLabels[0]} → ${fullLabels[fullLabels.length - 1]}` : ''
+    const series = [{ name: 'Parties', color: GAME_COLORS.dashikara, values }]
+    return { buckets, labels, fullLabels, period, series }
   }, [dashPlays, scale])
+
+  // Top 3 des joueurs les plus actifs (nb de parties Dashikara depuis le début).
+  const active = useMemo(() => {
+    if (!dashPlays) return null
+    const c = {}
+    for (const p of dashPlays) { const who = p.device || p.pseudo || 'Anonyme'; c[who] = (c[who] || 0) + 1 }
+    return Object.entries(c).map(([name, n]) => ({ name, n })).sort((a, b) => b.n - a.n).slice(0, 3)
+  }, [dashPlays])
 
   const loading = allPlays == null
 
@@ -190,27 +209,38 @@ function Dashboard({ onExit }) {
             ) : <div className="datax__empty">Aucun score.</div>}
           </section>
 
-          {/* Courbe des parties par joueur */}
+          {/* Top 3 des joueurs les plus actifs */}
+          <section className="datax__card">
+            <div className="datax__card-title">Top 3 · Joueurs les plus actifs</div>
+            {active && active.length > 0 ? (
+              <div className="datax__rank">
+                {active.map((a, i) => (
+                  <div key={a.name} className="datax__rank-row">
+                    <span className="datax__rank-medal">{MEDALS[i]}</span>
+                    <span className="datax__rank-name">{a.name}</span>
+                    <span className="datax__rank-score">{a.n} partie{a.n > 1 ? 's' : ''}</span>
+                  </div>
+                ))}
+                <div className="datax__foot-note">Parties Dashikara jouées depuis le début</div>
+              </div>
+            ) : <div className="datax__empty">Aucune partie enregistrée.</div>}
+          </section>
+
+          {/* Courbe du total de parties Dashikara lancées par période */}
           <section className="datax__card datax__card--wide">
             <div className="datax__card-head">
-              <div className="datax__card-title">Parties par joueur · Dashikara</div>
+              <div className="datax__card-title">Parties lancées · Dashikara</div>
               <div className="datax__toggle">
-                <button className={scale === 'week' ? 'is-on' : ''} onClick={() => setScale('week')}>Semaine</button>
-                <button className={scale === 'month' ? 'is-on' : ''} onClick={() => setScale('month')}>Mois</button>
+                <button className={scale === 'days'   ? 'is-on' : ''} onClick={() => setScale('days')}>7 jours</button>
+                <button className={scale === 'weeks'  ? 'is-on' : ''} onClick={() => setScale('weeks')}>Semaines</button>
+                <button className={scale === 'months' ? 'is-on' : ''} onClick={() => setScale('months')}>Mois</button>
+                <button className={scale === 'years'  ? 'is-on' : ''} onClick={() => setScale('years')}>Année</button>
               </div>
             </div>
             {chart ? (
               <>
                 {chart.period && <div className="datax__period">📅 {chart.period}</div>}
-                <LineChart labels={chart.labels} fullLabels={chart.fullLabels} series={chart.series} />
-                <div className="datax__legend">
-                  {chart.series.map(s => (
-                    <span key={s.name} className="datax__legend-it">
-                      <span className="datax__legend-dot" style={{ background: s.color }} />{s.name}
-                    </span>
-                  ))}
-                  {chart.hidden > 0 && <span className="datax__legend-it datax__legend-more">+{chart.hidden} autre{chart.hidden > 1 ? 's' : ''}</span>}
-                </div>
+                <LineChart labels={chart.labels} fullLabels={chart.fullLabels} series={chart.series} showValues />
               </>
             ) : <div className="datax__empty">Pas encore de parties Dashikara.</div>}
           </section>
@@ -220,10 +250,10 @@ function Dashboard({ onExit }) {
   )
 }
 
-// Graphe multi-lignes en SVG (aucune dépendance). `series[i].values` est aligné
-// sur `labels` (même longueur = axe X).
-function LineChart({ labels, fullLabels = [], series }) {
-  const W = 720, H = 260, PL = 34, PR = 12, PT = 16, PB = 34
+// Graphe en ligne (SVG, aucune dépendance). `series[i].values` est aligné sur
+// `labels` (même longueur = axe X). `showValues` affiche le nombre au-dessus des points.
+function LineChart({ labels, fullLabels = [], series, showValues = false }) {
+  const W = 720, H = 260, PL = 34, PR = 12, PT = 22, PB = 34
   const iw = W - PL - PR, ih = H - PT - PB
   const n = labels.length
   const maxY = Math.max(1, ...series.flatMap(s => s.values))
@@ -255,9 +285,14 @@ function LineChart({ labels, fullLabels = [], series }) {
           <g key={s.name}>
             <path d={d} fill="none" stroke={s.color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
             {s.values.map((v, i) => (
-              <circle key={i} cx={x(i)} cy={y(v)} r="3" fill={s.color}>
-                <title>{`${s.name} · ${fullLabels[i] || labels[i]} : ${v} partie${v > 1 ? 's' : ''}`}</title>
-              </circle>
+              <g key={i}>
+                {showValues && n <= 20 && v > 0 && (
+                  <text x={x(i)} y={y(v) - 8} textAnchor="middle" className="datax__chart-val">{v}</text>
+                )}
+                <circle cx={x(i)} cy={y(v)} r="3.5" fill={s.color}>
+                  <title>{`${fullLabels[i] || labels[i]} : ${v} partie${v > 1 ? 's' : ''}`}</title>
+                </circle>
+              </g>
             ))}
           </g>
         )
