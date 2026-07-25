@@ -363,6 +363,16 @@ canvas {
   50%       { opacity: 0.12; }
 }
 
+/* Intro — adaptation mobile (le titre et le texte du bas ne débordent plus) */
+@media (max-width: 560px) {
+  .intro__title { font-size: clamp(42px, 13vw, 96px); letter-spacing: 2px; }
+  .intro__by    { font-size: 13px; letter-spacing: 6px; }
+  .intro__press {
+    font-size: 11px; letter-spacing: 2px; white-space: normal;
+    width: 88%; text-align: center; line-height: 1.5; bottom: 10%;
+  }
+}
+
 /* ─── ÉCRAN SETUP PS4 ─── */
 .ps4-setup {
   position: absolute;
