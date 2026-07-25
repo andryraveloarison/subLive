@@ -1,22 +1,27 @@
 import { useEffect, useState } from 'react'
-import { fetchLeaderboard, dbReady } from '../lib/supabase.js'
+import { fetchLeaderboard, fetchPlayerCount, dbReady } from '../lib/supabase.js'
 
 // Classement Dashikara (meilleur score) — lit Supabase. Affiche « Pseudo (appareil) ».
-export default function Leaderboard({ limit = 10, title = 'CLASSEMENT · POINTS GAGNÉS', refreshKey }) {
+// Sans prop `title`, le titre affiche le nombre total de joueurs classés.
+export default function Leaderboard({ limit = 10, title, refreshKey }) {
   const [rows, setRows] = useState(null)
+  const [count, setCount] = useState(null)
 
   useEffect(() => {
     let on = true
     setRows(null)
     fetchLeaderboard(limit).then(r => { if (on) setRows(r) })
+    fetchPlayerCount().then(c => { if (on) setCount(c) })
     return () => { on = false }
   }, [limit, refreshKey])
 
   if (!dbReady) return null
 
+  const heading = title ?? (count == null ? 'Classement' : `Classement / ${count} joueur${count > 1 ? 's' : ''}`)
+
   return (
     <div className="lb">
-      <div className="lb__title">{title}</div>
+      <div className="lb__title">{heading}</div>
       {rows == null ? (
         <div className="lb__empty">Chargement…</div>
       ) : rows.length === 0 ? (

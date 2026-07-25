@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { PoseController } from '../webcam.js'
-import { submitScore } from '../lib/supabase.js'
+import { submitScore, recordPlay } from '../lib/supabase.js'
 import { getDevice } from '../lib/profile.js'
 import { useGame } from '../hooks/useGame.js'
 import { CHARACTERS } from '../data/characters.js'
@@ -149,6 +149,8 @@ export default function Layout() {
     const ch = CHARACTERS[picks[idx]] || CHARACTERS[0]
     gameRef.current.setCharacter(ch.colors, ch.avatar || 1)
     setScore(0); setCoins(0); setPower({ magnet: false, boots: false })
+    // Journalise la partie (une par run lancé) pour les stats /datax.
+    recordPlay('dashikara', names[idx] || `Joueur ${idx + 1}`, getDevice())
     gameRef.current.start()
     navigate('/play')
   }
@@ -187,7 +189,9 @@ export default function Layout() {
         <canvas ref={canvasRef} />
         <WebcamPreview cam={cam} videoRef={videoRef} hidden={camHidden} />
         {/* Pas sur /setup : chevauche le sélecteur « Joueurs » du match */}
-        {getDevice() && location.pathname !== '/setup' && <span className="device-chip">👤 {getDevice()}</span>}
+        {getDevice() && location.pathname !== '/setup' && (
+          <span className={`device-chip${showHome ? '' : ' device-chip--edge'}`}>👤 {getDevice()}</span>
+        )}
         {showHome && (
           <button className="home-btn" onClick={goMenu} title="Retour au menu">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

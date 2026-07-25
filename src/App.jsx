@@ -13,6 +13,7 @@ import GameOverPage from './pages/GameOverPage.jsx'
 import PenopenoPage from './pages/PenopenoPage.jsx'
 import RallyePage from './pages/RallyePage.jsx'
 import RallyeControllerPage from './pages/RallyeControllerPage.jsx'
+import DataxPage from './pages/DataxPage.jsx'
 
 export default function App() {
   return (
@@ -20,6 +21,9 @@ export default function App() {
     <Routes>
       {/* Sélection du jeu — standalone (pas de canvas 3D Dashikara) */}
       <Route path="/" element={<KilalaoPage />} />
+
+      {/* Tableau de bord privé (mot de passe) — standalone */}
+      <Route path="/datax" element={<DataxPage />} />
 
       {/* Penopeno — standalone */}
       <Route path="/penopeno" element={<PenopenoPage />} />

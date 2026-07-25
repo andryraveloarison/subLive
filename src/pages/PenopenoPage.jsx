@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as THREE from 'three'
 import { FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision'
+import { recordPlay } from '../lib/supabase.js'
+import { getDevice } from '../lib/profile.js'
 
 const WASM  = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'
 const MODEL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task'
@@ -93,6 +95,9 @@ export default function PenopenoPage() {
   const camCanRef = useRef(null)   // canvas webcam + squelette
   const videoRef  = useRef(null)
   const [ui, setUi] = useState({ phase: 'init', score: 0, kicked: 0, msg: '', camOk: false, aimY: 0.5, jumpPower: 0 })
+
+  // Journalise une partie Penopeno (stats /datax) au chargement de la page.
+  useEffect(() => { recordPlay('penopeno', '', getDevice()) }, [])
 
   useEffect(() => {
     const canvas = threeRef.current

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import * as THREE from 'three'
 import QRCode from 'qrcode'
 import { createHost, joinUrl } from '../net/rallyeNet.js'
+import { recordPlay } from '../lib/supabase.js'
+import { getDevice } from '../lib/profile.js'
 
 const LAPS      = 3
 const ROAD_W    = 12
@@ -751,6 +753,9 @@ export default function RallyePage() {
   const pickCircuit = (id) => { setCircuit(id); initialCircuitRef.current = id; applyCircuitRef.current?.(id) }
 
   useEffect(() => { phaseRef.current = phase }, [phase])
+
+  // Journalise une partie 2Rally (stats /datax) au chargement de la page.
+  useEffect(() => { recordPlay('rallye', '', getDevice()) }, [])
 
   const startCountdown = () => {
     let n = 3
