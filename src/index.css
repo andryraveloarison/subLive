@@ -1971,3 +1971,7 @@ canvas {
   background: rgba(0,229,255,0.1); border: 1px solid rgba(0,229,255,0.3);
   border-radius: 999px; padding: 4px 12px; white-space: nowrap;
 }
+
+/* Couronne du 1er au classement */
+.lb__crown, .datax__crown { margin-right: 5px; filter: drop-shadow(0 0 6px rgba(255,204,51,0.6)); }
+.datax__period { font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 8px; }

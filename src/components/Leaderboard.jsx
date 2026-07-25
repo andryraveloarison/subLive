@@ -30,7 +30,7 @@ export default function Leaderboard({ limit = 10, title, refreshKey }) {
         rows.map((r, i) => (
           <div key={r.pseudo + '·' + r.device} className={`lb__row${i === 0 ? ' lb__row--lead' : ''}`}>
             <span className="lb__pos">{i + 1}</span>
-            <span className="lb__name">{r.device} <i>({r.pseudo})</i></span>
+            <span className="lb__name">{i === 0 && <span className="lb__crown">👑</span>}{r.device} <i>({r.pseudo})</i></span>
             <span className="lb__score">🪙 {Number(r.best_score).toLocaleString('fr-FR')}</span>
           </div>
         ))

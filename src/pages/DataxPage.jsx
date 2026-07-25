@@ -26,6 +26,9 @@ const monthKey = (d) => { const x = new Date(d); return `${x.getFullYear()}-${St
 const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
 const weekLabel  = (k) => { const d = new Date(k); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}` }
 const monthLabel = (k) => { const [y, m] = k.split('-'); return `${MOIS[Number(m) - 1]} ${y.slice(2)}` }
+// Libellés complets (avec l'année) pour les info-bulles et la période affichée.
+const weekFull   = (k) => { const d = new Date(k); return `Semaine du ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}` }
+const monthFull  = (k) => { const [y, m] = k.split('-'); return `${MOIS[Number(m) - 1]} ${y}` }
 
 export default function DataxPage() {
   const navigate = useNavigate()
@@ -101,6 +104,7 @@ function Dashboard({ onExit }) {
     if (!dashPlays || dashPlays.length === 0) return null
     const keyOf   = scale === 'week' ? weekKey : monthKey
     const labelOf = scale === 'week' ? weekLabel : monthLabel
+    const fullOf  = scale === 'week' ? weekFull : monthFull
     const playerOf = (p) => (p.device || p.pseudo || 'Anonyme')
 
     const buckets = [...new Set(dashPlays.map(p => keyOf(p.played_at)))].sort()
@@ -117,7 +121,10 @@ function Dashboard({ onExit }) {
       color: LINE_COLORS[i % LINE_COLORS.length],
       values: buckets.map(b => grid[who]?.[b] || 0),
     }))
-    return { buckets, labels: buckets.map(labelOf), series, hidden: Object.keys(totals).length - topPlayers.length }
+    const labels = buckets.map(labelOf)
+    const fullLabels = buckets.map(fullOf)
+    const period = buckets.length ? `${fullOf(buckets[0])} → ${fullOf(buckets[buckets.length - 1])}` : ''
+    return { buckets, labels, fullLabels, period, series, hidden: Object.keys(totals).length - topPlayers.length }
   }, [dashPlays, scale])
 
   const loading = allPlays == null
@@ -175,7 +182,7 @@ function Dashboard({ onExit }) {
                 {ranking.map((r, i) => (
                   <div key={r.pseudo + '·' + r.device} className={`datax__rank-row${i === 0 ? ' is-lead' : ''}`}>
                     <span className="datax__rank-pos">{i + 1}</span>
-                    <span className="datax__rank-name">{r.device} <i>({r.pseudo})</i></span>
+                    <span className="datax__rank-name">{i === 0 && <span className="datax__crown">👑</span>}{r.device} <i>({r.pseudo})</i></span>
                     <span className="datax__rank-score">🪙 {Number(r.best_score).toLocaleString('fr-FR')}</span>
                   </div>
                 ))}
@@ -194,7 +201,8 @@ function Dashboard({ onExit }) {
             </div>
             {chart ? (
               <>
-                <LineChart labels={chart.labels} series={chart.series} />
+                {chart.period && <div className="datax__period">📅 {chart.period}</div>}
+                <LineChart labels={chart.labels} fullLabels={chart.fullLabels} series={chart.series} />
                 <div className="datax__legend">
                   {chart.series.map(s => (
                     <span key={s.name} className="datax__legend-it">
@@ -214,7 +222,7 @@ function Dashboard({ onExit }) {
 
 // Graphe multi-lignes en SVG (aucune dépendance). `series[i].values` est aligné
 // sur `labels` (même longueur = axe X).
-function LineChart({ labels, series }) {
+function LineChart({ labels, fullLabels = [], series }) {
   const W = 720, H = 260, PL = 34, PR = 12, PT = 16, PB = 34
   const iw = W - PL - PR, ih = H - PT - PB
   const n = labels.length
@@ -246,7 +254,11 @@ function LineChart({ labels, series }) {
         return (
           <g key={s.name}>
             <path d={d} fill="none" stroke={s.color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-            {s.values.map((v, i) => <circle key={i} cx={x(i)} cy={y(v)} r="3" fill={s.color} />)}
+            {s.values.map((v, i) => (
+              <circle key={i} cx={x(i)} cy={y(v)} r="3" fill={s.color}>
+                <title>{`${s.name} · ${fullLabels[i] || labels[i]} : ${v} partie${v > 1 ? 's' : ''}`}</title>
+              </circle>
+            ))}
           </g>
         )
       })}
