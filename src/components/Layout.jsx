@@ -7,6 +7,7 @@ import { useGame } from '../hooks/useGame.js'
 import { CHARACTERS } from '../data/characters.js'
 import { GameContext } from '../context/GameContext.js'
 import WebcamPreview from './WebcamPreview.jsx'
+import ProfileMenu from './ProfileMenu.jsx'
 
 // Ossature persistante : le canvas 3D et le moteur vivent ici et NE sont jamais
 // démontés lors des changements de page (contrairement à l'Outlet). Fournit le
@@ -189,9 +190,7 @@ export default function Layout() {
         <canvas ref={canvasRef} />
         <WebcamPreview cam={cam} videoRef={videoRef} hidden={camHidden} />
         {/* Pas sur /setup : chevauche le sélecteur « Joueurs » du match */}
-        {getDevice() && location.pathname !== '/setup' && (
-          <span className={`device-chip${showHome ? '' : ' device-chip--edge'}`}>👤 {getDevice()}</span>
-        )}
+        {location.pathname !== '/setup' && <ProfileMenu edge={!showHome} />}
         {showHome && (
           <button className="home-btn" onClick={goMenu} title="Retour au menu">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
