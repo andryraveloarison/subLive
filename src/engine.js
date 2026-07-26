@@ -14,6 +14,7 @@ const JUMP_V = 12.5
 const ROLL_TIME = 0.75           // durée de la glissade avant de se relever
 const TRACK_HALF = LANE * 1.8    // demi-largeur de la voie ballastée
 const TRAIN_CLIMB = 5            // longueur de la rampe avant du train : on grimpe dessus sans sauter
+const SPEED_MAX = 44             // vitesse maximale : au-delà, monter sur les trains devient impossible
 const POLICE_FAR = 11            // distance max en jeu propre (juste derrière, visible)
 const POLICE_BASE = 7.0          // distance après 1re faute (menaçant)
 const POLICE_CATCH = 1.7         // en-deçà, la police attrape -> perdu
@@ -1127,7 +1128,9 @@ export class Game {
   // ---------- Update ----------
   _update(dt) {
     this.time += dt
-    this.speed += dt * 0.32
+    // Vitesse plafonnée : sans limite, elle grimpait sans fin et le joueur traversait
+    // la rampe des trains (TRAIN_CLIMB) en trop peu d'images pour réussir à y monter.
+    this.speed = Math.min(SPEED_MAX, this.speed + dt * 0.32)
     const move = this.speed * dt
     this.dist += move
     this.score += move * 1.2

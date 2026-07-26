@@ -23,6 +23,11 @@ export class PoseController {
     this.lastCrouch = 0
     this.lane = 1
     this.t = 0
+    this._lastDetect = 0
+    // Détection limitée à ~30 img/s : le modèle tourne sur CPU et, lancé à chaque
+    // frame (jusqu'à 60/s), il monopolisait le CPU et faisait ramer le rendu 3D.
+    // 30/s reste largement suffisant pour suivre les gestes.
+    this._detectInterval = 1000 / 30
   }
 
   async start() {
@@ -60,7 +65,8 @@ export class PoseController {
   _loop = () => {
     if (!this.running) return
     const now = performance.now()
-    if (this.video.readyState >= 2) {
+    if (this.video.readyState >= 2 && now - this._lastDetect >= this._detectInterval) {
+      this._lastDetect = now
       const res = this.landmarker.detectForVideo(this.video, now)
       if (res.landmarks && res.landmarks[0]) this._process(res.landmarks[0], now)
     }
