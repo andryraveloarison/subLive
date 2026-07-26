@@ -86,15 +86,16 @@ export class PoseController {
     // baseline lissée de la hauteur debout
     if (this.baselineY == null) this.baselineY = cy
     // ne met à jour la baseline que doucement, et pas pendant un saut marqué
-    const drift = cy < this.baselineY - 0.08 ? 0.002 : 0.03
+    const drift = cy < this.baselineY - 0.06 ? 0.002 : 0.03
     this.baselineY += (cy - this.baselineY) * drift
 
     // vitesse verticale (négative = monte)
     const vy = this.prevY == null ? 0 : cy - this.prevY
     this.prevY = cy
 
-    // --- SAUT : le buste monte nettement au-dessus de la baseline ---
-    if (cy < this.baselineY - 0.06 && vy < -0.008 && now - this.lastJump > 600) {
+    // --- SAUT : le buste monte NETTEMENT au-dessus de la baseline (vrai saut, pas
+    // un simple mouvement vers le haut) : seuil de hauteur et de vitesse relevés. ---
+    if (cy < this.baselineY - 0.12 && vy < -0.018 && now - this.lastJump > 600) {
       this.lastJump = now
       this.cb.onJump?.()
     }
