@@ -133,9 +133,19 @@ function Dashboard({ onExit }) {
     const keyOf = scale === 'days' ? dayKey : scale === 'weeks' ? weekKey : scale === 'years' ? yearKey : monthKey
     const counts = countBy(keyOf)
     const values = buckets.map(b => counts[b] || 0)
+
+    // Détail par joueur (appareil) pour chaque point de la courbe → info-bulle au survol.
+    const perDevice = {}
+    for (const p of dashPlays) {
+      const k = keyOf(p.played_at)
+      const who = p.device || p.pseudo || 'Anonyme'
+      ;(perDevice[k] || (perDevice[k] = {}))[who] = (perDevice[k][who] || 0) + 1
+    }
+    const breakdowns = buckets.map(b => Object.entries(perDevice[b] || {}).sort((a, b) => b[1] - a[1]))
+
     const period = fullLabels.length ? `${fullLabels[0]} → ${fullLabels[fullLabels.length - 1]}` : ''
     const series = [{ name: 'Parties', color: GAME_COLORS.dashikara, values }]
-    return { buckets, labels, fullLabels, period, series }
+    return { buckets, labels, fullLabels, breakdowns, period, series }
   }, [dashPlays, scale])
 
   // Top 3 des joueurs les plus actifs (nb de parties Dashikara depuis le début).
@@ -240,7 +250,7 @@ function Dashboard({ onExit }) {
             {chart ? (
               <>
                 {chart.period && <div className="datax__period">📅 {chart.period}</div>}
-                <LineChart labels={chart.labels} fullLabels={chart.fullLabels} series={chart.series} showValues />
+                <LineChart labels={chart.labels} fullLabels={chart.fullLabels} breakdowns={chart.breakdowns} series={chart.series} showValues />
               </>
             ) : <div className="datax__empty">Pas encore de parties Dashikara.</div>}
           </section>
@@ -252,7 +262,7 @@ function Dashboard({ onExit }) {
 
 // Graphe en ligne (SVG, aucune dépendance). `series[i].values` est aligné sur
 // `labels` (même longueur = axe X). `showValues` affiche le nombre au-dessus des points.
-function LineChart({ labels, fullLabels = [], series, showValues = false }) {
+function LineChart({ labels, fullLabels = [], breakdowns = [], series, showValues = false }) {
   const W = 720, H = 260, PL = 34, PR = 12, PT = 22, PB = 34
   const iw = W - PL - PR, ih = H - PT - PB
   const n = labels.length
@@ -290,7 +300,10 @@ function LineChart({ labels, fullLabels = [], series, showValues = false }) {
                   <text x={x(i)} y={y(v) - 8} textAnchor="middle" className="datax__chart-val">{v}</text>
                 )}
                 <circle cx={x(i)} cy={y(v)} r="3.5" fill={s.color}>
-                  <title>{`${fullLabels[i] || labels[i]} : ${v} partie${v > 1 ? 's' : ''}`}</title>
+                  <title>{[
+                    `${fullLabels[i] || labels[i]} : ${v} partie${v > 1 ? 's' : ''}`,
+                    ...(breakdowns[i] || []).map(([who, n]) => `${who} — ${n}`),
+                  ].join('\n')}</title>
                 </circle>
               </g>
             ))}
