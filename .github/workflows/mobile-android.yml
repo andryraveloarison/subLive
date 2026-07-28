@@ -15,8 +15,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  APP_ID: com.andryraveloarison.sublive
-  APP_NAME: SubLive
+  APP_ID: com.nananjy.kilalao
+  APP_NAME: Kilalao
 
 jobs:
   build:
