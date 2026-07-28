@@ -1,0 +1,79 @@
+name: Build Android APK
+
+# Construit une version app mobile Android (APK) à partir du build web Vite,
+# en emballant le site avec Capacitor. Rien n'est ajouté au repo : Capacitor
+# est installé et initialisé à la volée à chaque exécution.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # bouton "Run workflow" dans l'onglet Actions
+
+# Un seul build à la fois par branche ; annule les runs obsolètes.
+concurrency:
+  group: mobile-android-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  APP_ID: com.andryraveloarison.sublive
+  APP_NAME: SubLive
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Java (JDK 17 pour Gradle/Android)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web (Vite -> dist/)
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: npm run build
+
+      - name: Install Capacitor (à la volée)
+        run: npm install --no-save @capacitor/core @capacitor/cli @capacitor/android
+
+      - name: Generate Capacitor config
+        run: |
+          cat > capacitor.config.json <<EOF
+          {
+            "appId": "${APP_ID}",
+            "appName": "${APP_NAME}",
+            "webDir": "dist"
+          }
+          EOF
+
+      - name: Add Android platform & sync
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sublive-android-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

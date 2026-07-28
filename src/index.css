@@ -1229,6 +1229,36 @@ canvas {
   align-items: center; gap: 5px;
 }
 
+/* Responsive Penopeno — téléphones & petits écrans */
+@media (max-width: 820px) {
+  .penopeno__hud {
+    top: 8px; gap: 10px; padding: 6px 14px;
+    font-size: 13px; letter-spacing: 0.5px;
+  }
+  .penopeno__remain { font-size: 11px; }
+
+  /* Indicateur trajectoire/puissance plus compact, collé au bord */
+  .penopeno__traject { left: 8px; gap: 6px; }
+  .penopeno__traject-bar { width: 13px; height: 34vh; max-height: 220px; }
+  .penopeno__traject-label { font-size: 8px; letter-spacing: 1px; }
+  .penopeno__traject-type { font-size: 9px; letter-spacing: 0.5px; }
+
+  .penopeno__hint {
+    bottom: 10px; font-size: 10px; letter-spacing: 1px;
+    padding: 0 12px; line-height: 1.4;
+  }
+  .penopeno__msg { font-size: clamp(28px, 10vw, 48px); top: 34%; }
+  .penopeno__over-score { font-size: 19px; }
+  .penopeno__over-stars { font-size: 22px; }
+  .penopeno__back { width: 32px; height: 32px; top: 8px; right: 8px; }
+}
+
+/* Portrait très étroit : évite que la barre et la webcam se chevauchent */
+@media (max-width: 820px) and (orientation: portrait) {
+  .penopeno__traject { top: 42%; }
+  .penopeno__traject-bar { height: 26vh; }
+}
+
 /* ══════════════════════════════════════════════════════════
    RALLYE — course néon nocturne (style Blur)
 ══════════════════════════════════════════════════════════ */
