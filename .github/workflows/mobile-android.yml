@@ -31,11 +31,11 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Setup Java (JDK 17 pour Gradle/Android)
+      - name: Setup Java (JDK 21 pour Gradle/Android)
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 21
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
