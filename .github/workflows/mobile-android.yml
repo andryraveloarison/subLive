@@ -67,6 +67,22 @@ jobs:
           npx cap add android
           npx cap sync android
 
+      - name: Fix Kotlin stdlib duplicate classes
+        run: |
+          cat >> android/app/build.gradle <<'EOF'
+
+          // Résout les doublons kotlin-stdlib-jdk7/jdk8 (1.6.21) vs kotlin-stdlib (1.8.22).
+          // Depuis Kotlin 1.8 les artefacts jdk7/jdk8 sont fusionnés dans le stdlib principal ;
+          // forcer une version unique élimine les classes en double.
+          configurations.all {
+              resolutionStrategy.eachDependency { details ->
+                  if (details.requested.group == 'org.jetbrains.kotlin' && details.requested.name.startsWith('kotlin-stdlib')) {
+                      details.useVersion '1.8.22'
+                  }
+              }
+          }
+          EOF
+
       - name: Build debug APK
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
