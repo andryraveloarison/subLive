@@ -13,22 +13,27 @@ export const dbReady = !!supabase
 
 const TABLE = 'dashikara_scores'
 const PLAYS = 'game_plays'
+const REVIEWS = 'dashikara_reviews'
 
 // Enregistre le score s'il bat le meilleur du couple (pseudo, appareil).
+// Résout à `true` si le classement a été mis à jour (nouveau record), `false`
+// sinon — utile pour rafraîchir l'affichage seulement quand c'est utile.
 export async function submitScore(pseudo, device, score) {
-  if (!supabase) return
+  if (!supabase) return false
   const p = String(pseudo || '').trim().slice(0, 24)
   const d = String(device || '').trim().slice(0, 24)
-  if (!p || !d) return
+  if (!p || !d) return false
   try {
     const { data } = await supabase.from(TABLE)
       .select('best_score').eq('pseudo', p).eq('device', d).maybeSingle()
-    if (data && data.best_score >= score) return          // pas mieux → rien à faire
-    await supabase.from(TABLE).upsert(
+    if (data && data.best_score >= score) return false     // pas mieux → rien à faire
+    const { error } = await supabase.from(TABLE).upsert(
       { pseudo: p, device: d, best_score: Math.floor(score), updated_at: new Date().toISOString() },
       { onConflict: 'pseudo,device' },
     )
-  } catch (e) { console.warn('[supabase] submitScore', e) }
+    if (error) throw error
+    return true
+  } catch (e) { console.warn('[supabase] submitScore', e); return false }
 }
 
 // Top N du classement (meilleur score décroissant).
@@ -84,4 +89,36 @@ export async function fetchPlays(game = null, limit = 5000) {
   } catch (e) { console.warn('[supabase] fetchPlays', e); return [] }
 }
 
-if (import.meta.env.DEV) window.__db = { submitScore, fetchLeaderboard, fetchPlayerCount, recordPlay, fetchPlays, dbReady }
+// ── Avis / commentaires des joueurs (reçus dans /datax) ──────────────
+// Enregistre un avis. Résout à `true` si l'envoi a réussi.
+export async function submitReview({ pseudo, device, rating, message } = {}) {
+  if (!supabase) return false
+  const msg = String(message || '').trim().slice(0, 500)
+  if (!msg) return false
+  const r = Math.floor(Number(rating))
+  try {
+    const { error } = await supabase.from(REVIEWS).insert({
+      pseudo: String(pseudo || '').trim().slice(0, 24),
+      device: String(device || '').trim().slice(0, 24),
+      rating: r >= 1 && r <= 5 ? r : null,
+      message: msg,
+    })
+    if (error) throw error
+    return true
+  } catch (e) { console.warn('[supabase] submitReview', e); return false }
+}
+
+// Tous les avis, du plus récent au plus ancien (affichés dans /datax).
+export async function fetchReviews(limit = 200) {
+  if (!supabase) return []
+  try {
+    const { data, error } = await supabase.from(REVIEWS)
+      .select('pseudo, device, rating, message, created_at')
+      .order('created_at', { ascending: false })
+      .limit(limit)
+    if (error) throw error
+    return data || []
+  } catch (e) { console.warn('[supabase] fetchReviews', e); return [] }
+}
+
+if (import.meta.env.DEV) window.__db = { submitScore, fetchLeaderboard, fetchPlayerCount, recordPlay, fetchPlays, submitReview, fetchReviews, dbReady }

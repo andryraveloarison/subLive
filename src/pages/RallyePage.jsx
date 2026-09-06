@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import * as THREE from 'three'
 import QRCode from 'qrcode'
 import { createHost, joinUrl } from '../net/rallyeNet.js'
+import { RACER_COLORS } from '../rallyeCars.js'
 import { recordPlay } from '../lib/supabase.js'
 import { getDevice } from '../lib/profile.js'
 
@@ -32,18 +33,12 @@ const HIT_SLOW   = 0.5         // vitesse conservée par la cible touchée
 
 // ── Classement cumulé (points par manche selon la place) ──
 const MANCHE_PTS = [10, 8, 6, 5, 4, 3, 2, 1]
+// Bonus « chrono » : le plus rapide de la manche gagne TIME_BONUS points, dégressif
+// jusqu'à 0 pour un écart de TIME_BONUS_GAP secondes avec le meneur.
+const TIME_BONUS     = 5
+const TIME_BONUS_GAP = 8
 
 const NEON_ORANGE = '#ff9100'
-
-// Couleurs des voitures pilotées (téléphones)
-const RACER_COLORS = [
-  { body: '#e53935', neon: '#00e5ff', name: 'Rouge'  },
-  { body: '#1e88e5', neon: '#40c4ff', name: 'Bleu'   },
-  { body: '#43a047', neon: '#69f0ae', name: 'Vert'   },
-  { body: '#fdd835', neon: '#fff59d', name: 'Jaune'  },
-  { body: '#8e24aa', neon: '#ea80fc', name: 'Violet' },
-  { body: '#fb8c00', neon: '#ffcc80', name: 'Orange' },
-]
 
 const angDiff = (a, b) => {
   let d = a - b
@@ -228,6 +223,44 @@ function makeBlobShadowTex() {
   return t
 }
 
+/* ── Étiquette « nom du joueur » flottant au-dessus d'une voiture (sprite) ── */
+function makeLabel(text, color) {
+  const H = 128, F = 64, pad = 36
+  const meas = document.createElement('canvas').getContext('2d')
+  meas.font = `bold ${F}px system-ui, "Segoe UI", sans-serif`
+  const tw = Math.ceil(meas.measureText(text).width)
+  const W = tw + pad * 2
+  const c = document.createElement('canvas')
+  c.width = W; c.height = H
+  const g = c.getContext('2d')
+  g.font = `bold ${F}px system-ui, "Segoe UI", sans-serif`
+  g.textAlign = 'center'; g.textBaseline = 'middle'
+  // Pilule de fond arrondie + liseré à la couleur de la voiture
+  const r = 30, x = 6, y = 24, w = W - 12, h = H - 48
+  g.beginPath()
+  g.moveTo(x + r, y)
+  g.arcTo(x + w, y, x + w, y + h, r)
+  g.arcTo(x + w, y + h, x, y + h, r)
+  g.arcTo(x, y + h, x, y, r)
+  g.arcTo(x, y, x + w, y, r)
+  g.closePath()
+  g.fillStyle = 'rgba(8,10,14,0.82)'; g.fill()
+  g.lineWidth = 5; g.strokeStyle = color; g.stroke()
+  g.fillStyle = '#ffffff'
+  g.shadowColor = color; g.shadowBlur = 12
+  g.fillText(text, W / 2, H / 2 + 2)
+  const tex = new THREE.CanvasTexture(c)
+  tex.anisotropy = 4
+  const spr = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: tex, transparent: true, depthTest: false, depthWrite: false,
+  }))
+  spr.renderOrder = 999
+  const s = 0.012
+  spr.scale.set(W * s, H * s, 1)
+  spr.position.set(0, 3.4, 0)
+  return spr
+}
+
 /* ── Géométrie du circuit ── */
 function makeTrackCurve(pts) {
   const v = (pts || TRACK_PTS).map(([x, z]) => new THREE.Vector3(x, 0, z))
@@ -248,6 +281,7 @@ function makeRacer(startFrame, extra) {
     pos: startFrame.pt.clone(), heading: startFrame.angle,
     v: 0, t: 0, totalTime: 0, finished: false, finishTime: 0, place: 0,
     steer: 0, boostUntil: 0, onWall: false, lastLat: 0,
+    spinVel: 0, spinUntil: 0, recoverUntil: 0,   // tête-à-queue après un tir + réalignement
     shake: 0, camPos: null,   // secousse + position caméra lissée (par joueur)
     fireReadyF: 0, fireReadyB: 0, points: 0,  // cooldowns canon avant/arrière + points cumulés
     input: { steer: 0, gas: false, brake: false, fireF: false, fireB: false },
@@ -290,12 +324,20 @@ function stepRacer(r, ctx) {
   else { r.v *= Math.max(0, 1 - DRAG * dt); if (boosting) r.v = Math.max(r.v, VMAX) }
   if (boosting && input.gas) r.v = vTop
 
-  // Direction : autorité réduite à haute vitesse, nulle à l'arrêt
-  const steerInput = input.steer
-  const grip      = THREE.MathUtils.clamp(r.v / 14, -1, 1)
-  const authority = 1 / (1 + (Math.abs(r.v) / VMAX) * 1.2)
-  r.heading -= steerInput * TURN_RATE * grip * authority * dt
-  r.v *= 1 - 0.05 * Math.abs(steerInput) * dt
+  // Tête-à-queue après un tir : la voiture part en toupie, direction neutralisée
+  const spinning   = elapsed < r.spinUntil
+  const steerInput = spinning ? 0 : input.steer
+  if (spinning) {
+    r.heading += r.spinVel * dt
+    r.spinVel *= Math.max(0, 1 - 2.4 * dt)   // le tête-à-queue s'essouffle progressivement
+    r.v       *= Math.max(0, 1 - 1.6 * dt)   // et la voiture ralentit fort
+  } else {
+    // Direction : autorité réduite à haute vitesse, nulle à l'arrêt
+    const grip      = THREE.MathUtils.clamp(r.v / 14, -1, 1)
+    const authority = 1 / (1 + (Math.abs(r.v) / VMAX) * 1.2)
+    r.heading -= steerInput * TURN_RATE * grip * authority * dt
+    r.v *= 1 - 0.05 * Math.abs(steerInput) * dt
+  }
 
   // Déplacement selon le cap réel
   r.pos.x += Math.sin(r.heading) * r.v * dt
@@ -309,6 +351,11 @@ function stepRacer(r, ctx) {
   }
   const f   = getFrame(curve, r.t)
   let   lat = (r.pos.x - f.pt.x) * f.right.x + (r.pos.z - f.pt.z) * f.right.z
+
+  // Sortie de tête-à-queue : on réaligne doucement le cap sur la piste pour y revenir
+  if (!spinning && elapsed < r.recoverUntil) {
+    r.heading += angDiff(f.angle, r.heading) * Math.min(1, 3 * dt)
+  }
 
   // Glissières : choc à l'entrée (selon l'angle) puis raclage + étincelles
   if (Math.abs(lat) > MAX_LAT) {
@@ -738,6 +785,8 @@ export default function RallyePage() {
   const cleanupNet   = useRef(null)
   const applyCircuitRef  = useRef(null)
   const initialCircuitRef = useRef('savane')
+  const applyCarRef      = useRef(null)
+  const initialCarRef    = useRef(0)
 
   const [phase,     setPhase]     = useState('ready')
   const [countdown, setCountdown] = useState(3)
@@ -749,15 +798,44 @@ export default function RallyePage() {
   const [views,     setViews]     = useState([])           // vues écran divisé (multi)
   const [room,      setRoom]      = useState({ code: null, url: null, qr: null, error: null })
   const [circuit,   setCircuit]   = useState('savane')
+  const [carSel,    setCarSel]    = useState(0)          // voiture choisie (solo)
+  const [paused,    setPaused]    = useState(false)
+  // Redémarrage automatique (solo) : après une manche, attend 10 s puis relance
+  const [autoRestart, setAutoRestart] = useState(() => localStorage.getItem('rallye.autoRestart') === '1')
+  const [autoLeft,    setAutoLeft]    = useState(0)      // secondes restantes avant relance auto
+  useEffect(() => { localStorage.setItem('rallye.autoRestart', autoRestart ? '1' : '0') }, [autoRestart])
 
   const pickCircuit = (id) => { setCircuit(id); initialCircuitRef.current = id; applyCircuitRef.current?.(id) }
+  const pickCar     = (idx) => { setCarSel(idx); initialCarRef.current = idx; applyCarRef.current?.(idx) }
+  const togglePause = () => {
+    if (phaseRef.current !== 'racing') return
+    const p = !raceRef.current.paused
+    raceRef.current.paused = p
+    setPaused(p)
+    try { hostRef.current?.broadcast?.({ type: 'paused', paused: p }) } catch (_) {}
+  }
 
   useEffect(() => { phaseRef.current = phase }, [phase])
+
+  // Relance automatique en solo : décompte de 10 s à la fin d'une manche
+  useEffect(() => {
+    if (phase !== 'finished' || mode !== 'solo' || !autoRestart) { setAutoLeft(0); return }
+    setAutoLeft(10)
+    const iv = setInterval(() => {
+      setAutoLeft(n => {
+        if (n <= 1) { clearInterval(iv); replayRef.current?.(); return 0 }
+        return n - 1
+      })
+    }, 1000)
+    return () => clearInterval(iv)
+  }, [phase, mode, autoRestart])
 
   // Journalise une partie 2Rally (stats /datax) au chargement de la page.
   useEffect(() => { recordPlay('rallye', '', getDevice()) }, [])
 
   const startCountdown = () => {
+    raceRef.current.paused = false
+    setPaused(false)
     let n = 3
     setCountdown(3)
     setPhase('countdown')
@@ -828,6 +906,7 @@ export default function RallyePage() {
     const aiCars = AI_DEFS.map(d => {
       const mesh = makeCar(d.color, d.neon, blobTex)
       mesh.userData.headlight.intensity = 60
+      mesh.add(makeLabel(d.name, d.neon))
       scene.add(mesh)
       return { mesh, t: d.tOff, lat: d.lat, spd: d.kmh / 3.6, vBump: 0, latVel: 0, yawWob: 0, slowUntil: 0, points: 0, name: d.name }
     })
@@ -909,10 +988,12 @@ export default function RallyePage() {
 
     // Une voiture pilotée touchée par un tir : freinée + déviée + secousse
     const hitRacerByShot = (r) => {
-      r.v *= HIT_SLOW
-      r.heading += (Math.random() - 0.5) * 0.55
-      addShake(r, 0.8); buzz(r)
-      spawnSparks(r.pos.x, 0.8, r.pos.z, 20); hitFxThrottled()
+      r.v *= 0.25                                        // freinage sec
+      r.spinVel     = (Math.random() < 0.5 ? -1 : 1) * 9 // ~1,4 tour/s au départ du tête-à-queue
+      r.spinUntil   = elapsed + 1.0                       // durée du spin
+      r.recoverUntil = elapsed + 2.2                      // réalignement auto sur la piste après le spin
+      addShake(r, 1.0); buzz(r)
+      spawnSparks(r.pos.x, 0.8, r.pos.z, 24); hitFxThrottled()
     }
     // Une IA touchée : ralentie temporairement + zigzag
     const hitAiByShot = (ai) => {
@@ -975,17 +1056,63 @@ export default function RallyePage() {
       r.t = -slot.back / trackLength
       r.v = 0; r.totalTime = 0; r.finished = false; r.finishTime = 0
       r.onWall = false; r.boostUntil = 0; r.steer = 0
+      r.spinVel = 0; r.spinUntil = 0; r.recoverUntil = 0
       r.fireReadyF = 0; r.fireReadyB = 0; r._pf = false; r._pb = false
       r.mesh.position.copy(r.pos)
       r.mesh.rotation.set(0, r.heading, 0)
     }
+    // Départ multijoueur : distribue les emplacements de grille aléatoirement
+    const placeAllShuffled = () => {
+      const slots = racers.map((_, i) => gridSlot(i))
+      for (let i = slots.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        const tmp = slots[i]; slots[i] = slots[j]; slots[j] = tmp
+      }
+      racers.forEach((r, i) => placeOnGrid(r, slots[i]))
+    }
 
-    // Voiture locale (mode solo, pilotée au clavier)
-    const localCar = makeCar('#e53935', '#00e5ff', blobTex)
+    // Dispose une voiture sans toucher aux textures partagées (ex. blobTex)
+    const disposeCar = (root) => root.traverse(o => {
+      if (o.geometry) o.geometry.dispose()
+      if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => {
+        if (m.map && m.map !== blobTex) m.map.dispose()
+        m.dispose()
+      })
+    })
+
+    // Étiquette flottante « nom » au-dessus d'une voiture pilotée
+    const setRacerLabel = (r, text, color) => {
+      if (r.label) { r.mesh.remove(r.label); r.label.material.map?.dispose(); r.label.material.dispose() }
+      const lbl = makeLabel(text, color)
+      r.mesh.add(lbl)
+      r.label = lbl
+    }
+
+    // Voiture locale (mode solo, pilotée au clavier) — couleur choisie sur l'accueil
+    let localCol = RACER_COLORS[initialCarRef.current] || RACER_COLORS[0]
+    let localCar = makeCar(localCol.body, localCol.neon, blobTex)
     localCar.userData.headlight.intensity = 160
     localCar.visible = false
     scene.add(localCar)
-    const localRacer = makeRacer(startFrame, { mesh: localCar, color: RACER_COLORS[0], name: 'Vous', num: 1, conn: null })
+    const localRacer = makeRacer(startFrame, { mesh: localCar, color: localCol, name: 'Vous', num: 1, conn: null })
+    setRacerLabel(localRacer, localRacer.name, localCol.neon)
+
+    // Changement de voiture depuis l'accueil : reconstruit le mesh + l'étiquette
+    applyCarRef.current = (idx) => {
+      const col = RACER_COLORS[idx] || RACER_COLORS[0]
+      const wasVisible = localCar.visible
+      scene.remove(localCar); disposeCar(localCar)
+      localCar = makeCar(col.body, col.neon, blobTex)
+      localCar.userData.headlight.intensity = 160
+      localCar.visible = wasVisible
+      localCar.position.copy(localRacer.pos)
+      localCar.rotation.set(0, localRacer.heading, 0)
+      scene.add(localCar)
+      localRacer.mesh = localCar
+      localRacer.color = col
+      localRacer.label = null
+      setRacerLabel(localRacer, localRacer.name, col.neon)
+    }
 
     const buzzThrottle = new Map()
     const buzz = (r) => {
@@ -999,9 +1126,28 @@ export default function RallyePage() {
       if (elapsed - lastFx > 0.5) { lastFx = elapsed; setHitFx(h => h + 1) }
     }
 
-    const syncPlayers = () => setPlayers(racers.map(r => ({
-      num: r.num, name: r.name, color: r.color.body,
-    })))
+    const syncPlayers = () => {
+      setPlayers(racers.map(r => ({ num: r.num, name: r.name, color: r.color.body })))
+      // Diffuse aux manettes les couleurs déjà prises (griser dans le sélecteur)
+      try { hostRef.current?.broadcast?.({ type: 'roster', taken: racers.map(r => r.carIdx ?? 0) }) } catch (_) {}
+    }
+
+    // Change la couleur/voiture d'un joueur : reconstruit son mesh + son étiquette
+    const recolorRacer = (r, col, idx) => {
+      const wasVisible = r.mesh.visible
+      scene.remove(r.mesh); disposeCar(r.mesh)
+      const mesh = makeCar(col.body, col.neon, blobTex)
+      mesh.userData.headlight.intensity = 140
+      mesh.visible = wasVisible
+      mesh.position.copy(r.pos)
+      mesh.rotation.set(0, r.heading, 0)
+      scene.add(mesh)
+      r.mesh = mesh
+      r.color = col
+      r.carIdx = idx
+      r.label = null
+      setRacerLabel(r, r.name, col.neon)
+    }
 
     // Classement de toutes les voitures par progression
     const rankAll = () => {
@@ -1017,6 +1163,8 @@ export default function RallyePage() {
 
     const endRace = () => {
       raceRef.current.racing = false
+      raceRef.current.paused = false
+      setPaused(false)
       mancheNum += 1
 
       // Participants unifiés (joueurs + IA en solo), classés par progression.
@@ -1034,15 +1182,25 @@ export default function RallyePage() {
       }))
       parts.sort((a, b) => b.prog - a.prog)
 
-      // Points de la manche + cumul sur l'objet voiture
+      // Bonus chrono : basé sur l'écart au meilleur temps de la manche.
+      // Actif seulement s'il y a au moins deux finissants (sinon pas de comparaison).
+      const finishers = parts.filter(p => p.time != null)
+      const tBest = finishers.length ? Math.min(...finishers.map(p => p.time)) : 0
+      const timeBonus = (t) =>
+        (finishers.length >= 2 && t != null)
+          ? Math.round(TIME_BONUS * Math.max(0, 1 - (t - tBest) / TIME_BONUS_GAP))
+          : 0
+
+      // Points de la manche (place + bonus chrono) + cumul sur l'objet voiture
       parts.forEach((p, i) => {
         p.place  = i + 1
-        p.gained = MANCHE_PTS[i] ?? 0
+        p.bonus  = timeBonus(p.time)
+        p.gained = (MANCHE_PTS[i] ?? 0) + p.bonus
         p.o.points = (p.o.points || 0) + p.gained
       })
 
       // Classement de la manche + classement général (somme des points)
-      const board = parts.map(p => ({ pos: p.place, name: p.name, color: p.color, time: p.time, gained: p.gained }))
+      const board = parts.map(p => ({ pos: p.place, name: p.name, color: p.color, time: p.time, gained: p.gained, bonus: p.bonus }))
       const standings = parts
         .map(p => ({ name: p.name, color: p.color, place: p.place, gained: p.gained, points: p.o.points }))
         .sort((a, b) => b.points - a.points || a.place - b.place)
@@ -1081,10 +1239,14 @@ export default function RallyePage() {
 
     function tick(now) {
       animId = requestAnimationFrame(tick)
-      const dt = Math.min((now - lastNow) / 1000, 0.05)
+      const rawDt = Math.min((now - lastNow) / 1000, 0.05)
       lastNow  = now
+      // En pause : dt = 0 → physique, caméra, particules et minuteurs figés,
+      // mais on continue de rendre la scène (image gelée sous l'overlay).
+      const isPaused = raceRef.current.paused
+      const dt = isPaused ? 0 : rawDt
       elapsed += dt
-      const racing = raceRef.current.racing
+      const racing = raceRef.current.racing && !isPaused
       const aiActive = modeLocal === 'solo'
 
       // IA
@@ -1176,7 +1338,7 @@ export default function RallyePage() {
         const dirX = Math.sin(r.heading), dirZ = Math.cos(r.heading)
         r.camPos.lerp(new THREE.Vector3(r.pos.x - dirX * back, 2.9 + spdRatio * 0.6, r.pos.z - dirZ * back), Math.min(1, dt * 5))
         cam.position.copy(r.camPos)
-        if (r.shake > 0.01) {
+        if (r.shake > 0.01 && !isPaused) {
           cam.position.x += (Math.random() - 0.5) * r.shake * 0.7
           cam.position.y += (Math.random() - 0.5) * r.shake * 0.45
           cam.position.z += (Math.random() - 0.5) * r.shake * 0.7
@@ -1258,7 +1420,8 @@ export default function RallyePage() {
       if (!racers.length) return
       finishOrder.length = 0
       mancheNum = 0
-      racers.forEach((r, i) => { r.points = 0; placeOnGrid(r, gridSlot(i)) })
+      racers.forEach(r => { r.points = 0 })
+      placeAllShuffled()
       resetWeapons()
       startCountdown()
     }
@@ -1267,7 +1430,7 @@ export default function RallyePage() {
     replayRef.current = () => {
       finishOrder.length = 0
       if (modeLocal === 'solo') { placeOnGrid(localRacer, { lat: 0, back: 5 }); resetAi() }
-      else racers.forEach((r, i) => placeOnGrid(r, gridSlot(i)))
+      else placeAllShuffled()
       resetWeapons()
       startCountdown()
     }
@@ -1293,17 +1456,22 @@ export default function RallyePage() {
         onConnect: (id, conn) => {
           if (racers.length >= MAX_PLAYERS) { try { conn.send({ type: 'full' }) } catch (_) {} return }
           const idx = racers.length
-          const col = RACER_COLORS[idx % RACER_COLORS.length]
+          // Première couleur libre (à partir de l'ordre d'arrivée)
+          const taken = new Set(racers.map(x => x.carIdx))
+          let colIdx = idx % RACER_COLORS.length
+          if (taken.has(colIdx)) for (let k = 0; k < RACER_COLORS.length; k++) { if (!taken.has(k)) { colIdx = k; break } }
+          const col = RACER_COLORS[colIdx]
           const rawName = (conn.metadata && conn.metadata.name || '').toString().trim()
           const name = rawName ? rawName.slice(0, 12) : col.name
           const mesh = makeCar(col.body, col.neon, blobTex)
           mesh.userData.headlight.intensity = 140
           scene.add(mesh)
-          const r = makeRacer(startFrame, { mesh, color: col, name, num: idx + 1, conn, id })
+          const r = makeRacer(startFrame, { mesh, color: col, carIdx: colIdx, name, num: idx + 1, conn, id })
+          setRacerLabel(r, name, col.neon)
           placeOnGrid(r, gridSlot(idx))
           racers.push(r)
           try {
-            conn.send({ type: 'welcome', color: col.body, name, num: idx + 1 })
+            conn.send({ type: 'welcome', color: col.body, name, num: idx + 1, car: colIdx })
             conn.send({ type: 'phase', phase: phaseRef.current === 'lobby' ? 'lobby' : phaseRef.current })
           } catch (_) {}
           syncPlayers()
@@ -1320,6 +1488,21 @@ export default function RallyePage() {
           if (fB && !r._pb) fire(r, -1)
           r._pf = fF; r._pb = fB
         },
+        // Choix de voiture depuis une manette (uniquement dans le salon)
+        onCar: (id, data) => {
+          if (phaseRef.current !== 'lobby') return
+          const r = racers.find(x => x.id === id)
+          if (!r) return
+          const idx = Number(data.car)
+          const col = RACER_COLORS[idx]
+          if (!col || idx === r.carIdx) return
+          if (racers.some(x => x !== r && x.carIdx === idx)) return   // couleur déjà prise
+          recolorRacer(r, col, idx)
+          try { r.conn.send({ type: 'welcome', color: col.body, name: r.name, num: r.num, car: idx }) } catch (_) {}
+          syncPlayers()
+        },
+        // Bouton pause d'une manette → bascule la pause de l'hôte
+        onPause: () => togglePause(),
         onDisconnect: (id) => {
           const i = racers.findIndex(x => x.id === id)
           if (i < 0) return
@@ -1352,7 +1535,12 @@ export default function RallyePage() {
       if (e.code === 'KeyD') keysRef.current['d'] = down
       if (k && GAME_KEYS.has(k)) e.preventDefault()
     }
-    const onKeyDown = e => setKey(e, true)
+    const onKeyDown = e => {
+      const k = e.key?.toLowerCase()
+      // Échap / P : bascule la pause pendant la course
+      if (!e.repeat && (k === 'escape' || k === 'p')) togglePause()
+      setKey(e, true)
+    }
     const onKeyUp   = e => setKey(e, false)
     const onBlur    = () => { keysRef.current = {} }
 
@@ -1437,6 +1625,37 @@ export default function RallyePage() {
         </div>
       )}
 
+      {/* ── Bouton pause (pendant la course) ── */}
+      {phase === 'racing' && !paused && (
+        <button
+          className="rallye__pause-btn"
+          onClick={togglePause}
+          aria-label="Pause"
+          style={{
+            position: 'absolute', top: '14px', right: '14px', zIndex: 30,
+            width: '46px', height: '46px', borderRadius: '12px',
+            border: '1px solid rgba(255,255,255,0.25)',
+            background: 'rgba(10,12,16,0.55)', color: '#fff',
+            fontSize: '18px', cursor: 'pointer',
+          }}
+        >
+          ⏸
+        </button>
+      )}
+
+      {/* ── Overlay de pause ── */}
+      {paused && (
+        <div className="rallye__overlay">
+          <div className="rallye__logo">⏸</div>
+          <h1 className="rallye__title rallye__title--sm">PAUSE</h1>
+          <p className="rallye__sub">Course en pause · <b>Échap</b> pour reprendre</p>
+          <div className="rallye__btns">
+            <button className="rallye__btn" onClick={togglePause}>Reprendre ▶</button>
+            <button className="rallye__btn rallye__btn--sec" onClick={leaveToMenu}>Quitter</button>
+          </div>
+        </div>
+      )}
+
       {/* ── Écran d'accueil ── */}
       {phase === 'ready' && (
         <div className="rallye__overlay">
@@ -1457,7 +1676,24 @@ export default function RallyePage() {
             ))}
           </div>
 
-          <p className="rallye__controls">↑ accélérer · ↓ freiner · ← → diriger · <b>Espace</b> tir avant · <b>B</b> tir arrière</p>
+          <p className="rallye__sub rallye__sub--sm">Choisis ta voiture</p>
+          <div className="rallye__circuits rallye__circuits--sm">
+            {RACER_COLORS.map((c, i) => (
+              <button
+                key={i}
+                className={`rallye__circuit${carSel === i ? ' rallye__circuit--sel' : ''}`}
+                onClick={() => pickCar(i)}
+              >
+                <span
+                  className="rallye__circuit-emoji"
+                  style={{ display: 'inline-block', width: '1.5em', height: '1.5em', borderRadius: '50%', background: c.body, boxShadow: `0 0 12px ${c.neon}` }}
+                />
+                <span className="rallye__circuit-name">{c.name}</span>
+              </button>
+            ))}
+          </div>
+
+          <p className="rallye__controls">↑ accélérer · ↓ freiner · ← → diriger · <b>Espace</b> tir avant · <b>B</b> tir arrière · <b>Échap</b> pause</p>
           <div className="rallye__btns">
             <button className="rallye__btn" onClick={() => soloRef.current?.()}>SOLO</button>
             <button className="rallye__btn rallye__btn--accent" onClick={() => hostRef.beginHost?.()}>MULTIJOUEUR 📱</button>
@@ -1550,7 +1786,17 @@ export default function RallyePage() {
           </div>
 
           <div className="rallye__btns">
-            <button className="rallye__btn" onClick={() => replayRef.current?.()}>Manche suivante ▶</button>
+            <button className="rallye__btn" onClick={() => replayRef.current?.()}>
+              {autoRestart && autoLeft > 0 ? `Manche suivante dans ${autoLeft}s ▶` : 'Manche suivante ▶'}
+            </button>
+            {mode === 'solo' && (
+              <button
+                className={`rallye__btn rallye__btn--sec${autoRestart ? ' rallye__btn--on' : ''}`}
+                onClick={() => setAutoRestart(v => !v)}
+              >
+                🔁 Relance auto : {autoRestart ? 'ON' : 'OFF'}
+              </button>
+            )}
             <button className="rallye__btn rallye__btn--sec" onClick={leaveToMenu}>Quitter</button>
           </div>
         </div>

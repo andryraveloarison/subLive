@@ -154,8 +154,8 @@ canvas {
   position: absolute;
   right: 20px;
   bottom: 20px;
-  width: 200px;
-  height: 150px;
+  width: 300px;
+  height: 225px;
   border-radius: 14px;
   overflow: hidden;
   border: 2px solid rgba(255, 255, 255, 0.15);
@@ -203,6 +203,11 @@ canvas {
   padding: 11px 28px;
 }
 .btn.ghost:disabled { opacity: 0.6; cursor: default; }
+.btn.ghost.on {
+  color: var(--accent, #f5a623);
+  border-color: rgba(245, 166, 35, 0.7);
+  box-shadow: 0 0 18px rgba(245, 166, 35, 0.35);
+}
 
 .keys { font-size: 14px; color: #94a3b8; }
 .keys kbd {
@@ -420,6 +425,8 @@ canvas {
 .ps4-count {
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
@@ -459,6 +466,75 @@ canvas {
   gap: 14px;
   overflow: hidden;
   min-height: 0;
+}
+
+/* Carrousel : un joueur réglé à la fois */
+.ps4-solo {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 12px 40px 0;
+  min-height: 0;
+}
+
+.ps4-nav {
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  line-height: 1;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.ps4-nav:hover:not(:disabled) {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.3);
+  color: #fff;
+}
+
+.ps4-nav:disabled { opacity: 0.2; cursor: default; }
+
+.ps4-player-card--solo {
+  width: min(360px, 80vw);
+  max-width: 360px;
+  height: 100%;
+  max-height: 100%;
+}
+
+.ps4-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 0 4px;
+  flex-shrink: 0;
+}
+
+.ps4-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  background: rgba(255,255,255,0.22);
+  transition: all 0.15s;
+}
+
+.ps4-dot--active {
+  background: #fff;
+  box-shadow: 0 0 10px rgba(255,255,255,0.6);
+  transform: scale(1.25);
 }
 
 .ps4-player-card {
@@ -1483,6 +1559,12 @@ canvas {
   border: 1px solid rgba(255,45,149,0.4);
   box-shadow: 0 0 14px rgba(255,45,149,0.2);
 }
+.rallye__btn--on {
+  background: rgba(0,229,255,0.16);
+  color: var(--neon-cyan);
+  border: 1px solid rgba(0,229,255,0.7);
+  box-shadow: 0 0 20px rgba(0,229,255,0.45);
+}
 
 /* ── Contrôles tactiles ── */
 .rallye__touch {
@@ -1928,7 +2010,7 @@ canvas {
 ══════════════════════════════════════════════════════════ */
 @media (max-width: 820px) {
   /* Aperçu webcam plus discret */
-  .cam { width: 132px; height: 99px; right: 10px; bottom: 10px; border-radius: 10px; }
+  .cam { width: 200px; height: 150px; right: 10px; bottom: 10px; border-radius: 10px; }
   .cam-badge { font-size: 9px; }
 
   /* Puce d'appareil compacte */
@@ -2144,3 +2226,64 @@ canvas {
 /* Top 3 des joueurs les plus actifs — médailles */
 .datax__rank-medal { width: 24px; text-align: center; font-size: 18px; flex: none; }
 .datax__chart-val { fill: rgba(255,255,255,0.85); font-size: 12px; font-weight: 700; }
+
+/* ─── Modal « Laisser un avis » (menu Dashikara) ─── */
+.review-overlay {
+  position: fixed; inset: 0; z-index: 55;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  background: rgba(8, 10, 18, 0.8);
+  backdrop-filter: blur(6px);
+}
+.review-panel {
+  width: min(460px, 94vw);
+  max-height: 88vh; overflow-y: auto;
+  display: flex; flex-direction: column;
+  background: linear-gradient(160deg, #1b1a24, #12111a);
+  border: 1px solid rgba(247, 230, 196, 0.18);
+  border-radius: 18px;
+  padding: 26px 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+}
+.review-panel__title { margin: 0 0 4px; font-size: 22px; color: var(--mg-cream); text-align: center; }
+.review-panel__sub { margin: 0 0 18px; font-size: 13px; color: rgba(255,255,255,0.55); text-align: center; }
+.review-input, .review-text {
+  font: inherit;
+  width: 100%; box-sizing: border-box;
+  color: var(--mg-cream);
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 10px;
+  padding: 11px 13px;
+  margin-bottom: 12px;
+}
+.review-input:focus, .review-text:focus { outline: none; border-color: var(--mg-gold); }
+.review-text { resize: vertical; min-height: 90px; }
+.review-stars { display: flex; justify-content: center; gap: 6px; margin-bottom: 14px; }
+.review-star {
+  font-size: 30px; line-height: 1;
+  background: none; border: none; cursor: pointer;
+  color: rgba(255,255,255,0.22);
+  transition: color 0.12s, transform 0.12s;
+}
+.review-star:hover { transform: scale(1.15); }
+.review-star.on { color: var(--mg-gold); filter: drop-shadow(0 0 6px rgba(245,166,35,0.55)); }
+.review-err { color: #ff8a8a; font-size: 13px; text-align: center; margin: 0 0 10px; }
+.review-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.review-done { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.review-done__icon { font-size: 46px; }
+
+/* ─── Avis des joueurs (tableau de bord /datax) ─── */
+.datax__reviews { display: flex; flex-direction: column; gap: 12px; max-height: 420px; overflow-y: auto; }
+.datax__review {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.datax__review-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+.datax__review-who { font-weight: 700; color: var(--mg-cream); }
+.datax__review-stars { color: var(--mg-gold); letter-spacing: 1px; font-size: 13px; }
+.datax__review-stars-off { color: rgba(255,255,255,0.18); }
+.datax__review-date { margin-left: auto; font-size: 12px; color: rgba(255,255,255,0.45); }
+.datax__review-msg { color: rgba(255,255,255,0.82); font-size: 14px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }

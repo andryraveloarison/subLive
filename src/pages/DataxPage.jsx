@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchPlays, fetchLeaderboard, fetchPlayerCount, dbReady } from '../lib/supabase.js'
+import { fetchPlays, fetchLeaderboard, fetchPlayerCount, fetchReviews, dbReady } from '../lib/supabase.js'
 
 // Tableau de bord privé (protégé par mot de passe). Affiche l'activité Kilalao :
 // jeu le plus joué, classement Dashikara et courbe des parties par joueur
@@ -74,14 +74,15 @@ function Dashboard({ onExit }) {
   const [dashPlays, setDashPlays] = useState(null)
   const [ranking, setRanking] = useState(null)
   const [players, setPlayers] = useState(null)        // nb total de joueurs Dashikara
+  const [reviews, setReviews] = useState(null)        // avis des joueurs
   const [scale, setScale] = useState('days')          // 'days' | 'weeks' | 'months' | 'years'
 
   useEffect(() => {
     let on = true
-    Promise.all([fetchPlays(null), fetchPlays('dashikara'), fetchLeaderboard(20), fetchPlayerCount()])
-      .then(([all, dash, rank, count]) => {
+    Promise.all([fetchPlays(null), fetchPlays('dashikara'), fetchLeaderboard(20), fetchPlayerCount(), fetchReviews()])
+      .then(([all, dash, rank, count, revs]) => {
         if (!on) return
-        setAllPlays(all); setDashPlays(dash); setRanking(rank); setPlayers(count)
+        setAllPlays(all); setDashPlays(dash); setRanking(rank); setPlayers(count); setReviews(revs)
       })
     return () => { on = false }
   }, [])
@@ -253,6 +254,38 @@ function Dashboard({ onExit }) {
                 <LineChart labels={chart.labels} fullLabels={chart.fullLabels} breakdowns={chart.breakdowns} series={chart.series} showValues />
               </>
             ) : <div className="datax__empty">Pas encore de parties Dashikara.</div>}
+          </section>
+
+          {/* Avis des joueurs */}
+          <section className="datax__card datax__card--wide">
+            <div className="datax__card-head">
+              <div className="datax__card-title">💬 Avis des joueurs</div>
+              {reviews != null && <span className="datax__badge">{reviews.length} avis</span>}
+            </div>
+            {reviews && reviews.length > 0 ? (
+              <div className="datax__reviews">
+                {reviews.map((r, i) => {
+                  const who = r.device || r.pseudo || 'Anonyme'
+                  const sub = r.device && r.pseudo ? ` (${r.pseudo})` : ''
+                  return (
+                    <div key={i} className="datax__review">
+                      <div className="datax__review-head">
+                        <span className="datax__review-who">{who}{sub}</span>
+                        {r.rating ? (
+                          <span className="datax__review-stars" title={`${r.rating}/5`}>
+                            {'★'.repeat(r.rating)}<span className="datax__review-stars-off">{'★'.repeat(5 - r.rating)}</span>
+                          </span>
+                        ) : null}
+                        <span className="datax__review-date">
+                          {new Date(r.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </span>
+                      </div>
+                      <div className="datax__review-msg">{r.message}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : <div className="datax__empty">Aucun avis pour l'instant.</div>}
           </section>
         </div>
       )}

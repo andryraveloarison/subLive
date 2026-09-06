@@ -2,14 +2,17 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useGameCtx } from '../context/GameContext.js'
 import Leaderboard from '../components/Leaderboard.jsx'
+import ReviewModal from '../components/ReviewModal.jsx'
+import { dbReady } from '../lib/supabase.js'
 
 // Accueil cinématique (style écran-titre console) : le monde 3D défile en fond,
 // logo en haut, liste verticale d'options navigable au clavier (↑ ↓ Entrée).
 export default function MenuPage() {
-  const { best, cam, camMsg, enableCam, disableCam, goSetup } = useGameCtx()
+  const { best, cam, camMsg, scoreVersion, enableCam, disableCam, goSetup } = useGameCtx()
   const navigate = useNavigate()
   const [sel, setSel] = useState(0)
   const [showLb, setShowLb] = useState(false)
+  const [showReview, setShowReview] = useState(false)
   const [camModal, setCamModal] = useState(false)   // modal d'activation webcam
 
   // Ouvre la modal d'instructions et lance l'activation de la webcam.
@@ -29,11 +32,12 @@ export default function MenuPage() {
   const camOn = cam === 'on'
   const items = [
     { key: 'solo',  label: 'Solo',   hint: camOn ? 'Course en solo'    : '⚠ Active la webcam pour jouer', action: () => goSetup(false), disabled: !camOn },
-    { key: 'match', label: 'Match',  hint: camOn ? "Jusqu'à 4 joueurs" : '⚠ Active la webcam pour jouer', action: () => goSetup(true),  disabled: !camOn },
+    { key: 'match', label: 'Match',  hint: camOn ? "Jusqu'à 8 joueurs" : '⚠ Active la webcam pour jouer', action: () => goSetup(true),  disabled: !camOn },
     camOn
       ? { key: 'cam', label: 'Désactiver la webcam', hint: 'Arrête la détection de corps', action: disableCam }
       : { key: 'cam', label: cam === 'loading' ? 'Chargement…' : 'Activer la webcam (obligatoire)', hint: 'Joue avec ton corps', action: startCam, disabled: cam === 'loading' },
     ...(mobile ? [{ key: 'lb', label: 'Classement', hint: 'Top 10 des joueurs', action: () => setShowLb(true) }] : []),
+    ...(dbReady ? [{ key: 'review', label: 'Laisser un avis', hint: 'Donne ton avis sur le jeu', action: () => setShowReview(true) }] : []),
     { key: 'quit', label: 'Quitter', hint: 'Retour à la sélection des jeux', action: () => navigate('/') },
   ]
 
@@ -43,6 +47,8 @@ export default function MenuPage() {
   itemsRef.current = items
   const showLbRef = useRef(showLb)
   showLbRef.current = showLb
+  const showReviewRef = useRef(showReview)
+  showReviewRef.current = showReview
   const camModalRef = useRef(camModal)
   camModalRef.current = camModal
   const camRef = useRef(cam)
@@ -58,6 +64,11 @@ export default function MenuPage() {
       }
       if (showLbRef.current) {
         if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); setShowLb(false) }
+        return
+      }
+      // Modal avis : on laisse la saisie clavier libre, Échap ferme.
+      if (showReviewRef.current) {
+        if (e.key === 'Escape') { e.preventDefault(); setShowReview(false) }
         return
       }
       const its = itemsRef.current
@@ -81,7 +92,7 @@ export default function MenuPage() {
       </header>
 
       <aside className="zelda__leaderboard">
-        <Leaderboard limit={10} />
+        <Leaderboard limit={10} refreshKey={scoreVersion} />
       </aside>
 
       <nav className="zelda__menu">
@@ -140,11 +151,13 @@ export default function MenuPage() {
       {showLb && (
         <div className="zelda__lb-overlay" onClick={() => setShowLb(false)}>
           <div className="zelda__lb-panel" onClick={(e) => e.stopPropagation()}>
-            <Leaderboard limit={10} />
+            <Leaderboard limit={10} refreshKey={scoreVersion} />
             <button className="zelda__lb-close" onClick={() => setShowLb(false)}>Fermer</button>
           </div>
         </div>
       )}
+
+      {showReview && <ReviewModal onClose={() => setShowReview(false)} />}
 
       <footer className="zelda__foot">
         <span className="zelda__best">{best > 0 ? `Meilleur : 🪙 ${best.toLocaleString('fr-FR')}` : 'by nananjy'}</span>

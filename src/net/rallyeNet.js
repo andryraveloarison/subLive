@@ -64,7 +64,10 @@ export function createHost(callbacks) {
         callbacks.onConnect?.(conn.peer, conn)
       })
       conn.on('data', (data) => {
-        if (data && data.type === 'input') callbacks.onInput?.(conn.peer, data)
+        if (!data) return
+        if (data.type === 'input')      callbacks.onInput?.(conn.peer, data)
+        else if (data.type === 'car')   callbacks.onCar?.(conn.peer, data)
+        else if (data.type === 'pause') callbacks.onPause?.(conn.peer, data)
       })
       const drop = () => {
         if (conns.delete(conn.peer)) callbacks.onDisconnect?.(conn.peer)
@@ -118,6 +121,8 @@ export function createController(code, name, callbacks) {
 
   return {
     send(input) { if (conn && conn.open) conn.send({ type: 'input', ...input }) },
+    selectCar(car) { if (conn && conn.open) conn.send({ type: 'car', car }) },
+    togglePause() { if (conn && conn.open) conn.send({ type: 'pause' }) },
     destroy() {
       destroyed = true
       if (conn) { try { conn.close() } catch (_) {} }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { createController } from '../net/rallyeNet.js'
+import { RACER_COLORS } from '../rallyeCars.js'
 
 // Disposition par défaut des boutons (position + taille en % de l'écran de jeu)
 const DEFAULT_LAYOUT = {
@@ -29,10 +30,12 @@ export default function RallyeControllerPage() {
   const [codeInput, setCodeInput] = useState('')
   const [nameInput, setNameInput] = useState('')
   const [status,    setStatus]    = useState('form') // form|connecting|connected|error|full|closed
-  const [me,        setMe]        = useState({ color: '#888', name: '', num: 0 })
+  const [me,        setMe]        = useState({ color: '#888', name: '', num: 0, car: -1 })
   const [phase,     setPhase]     = useState('lobby')
   const [hud,       setHud]       = useState({ pos: 0, lap: 1, speed: 0, boost: false, total: 0 })
   const [result,    setResult]    = useState(null)
+  const [roster,    setRoster]    = useState([])    // index des couleurs déjà prises
+  const [paused,    setPaused]    = useState(false)
 
   // Réglages manette (mémorisés)
   const [tilt,         setTilt]         = useState(() => localStorage.getItem('rallye.tilt') === '1')
@@ -57,9 +60,11 @@ export default function RallyeControllerPage() {
       onMessage: (msg) => {
         if (!msg) return
         switch (msg.type) {
-          case 'welcome': setMe({ color: msg.color, name: msg.name, num: msg.num }); break
+          case 'welcome': setMe({ color: msg.color, name: msg.name, num: msg.num, car: msg.car ?? -1 }); break
+          case 'roster':  setRoster(Array.isArray(msg.taken) ? msg.taken : []); break
+          case 'paused':  setPaused(!!msg.paused); break
           case 'full':    setStatus('full'); break
-          case 'phase':   setPhase(msg.phase); if (msg.phase !== 'finished') setResult(null); break
+          case 'phase':   setPhase(msg.phase); setPaused(false); if (msg.phase !== 'finished') setResult(null); break
           case 'hud':     setHud({ pos: msg.pos, lap: msg.lap, speed: msg.speed, boost: msg.boost, total: msg.total }); break
           case 'result':  setResult({ pos: msg.pos, points: msg.points, manche: msg.manche }); setPhase('finished'); break
           case 'buzz':    navigator.vibrate?.(60); break
@@ -231,6 +236,11 @@ export default function RallyeControllerPage() {
               <span className={`rctrl__stat rctrl__stat--spd${hud.boost ? ' rctrl__stat--boost' : ''}`}>{hud.speed}<i>km/h</i></span>
             </>
           )}
+          {phase === 'racing' && !editMode && (
+            <button className="rctrl__gear" onClick={() => ctrlRef.current?.togglePause?.()} aria-label="Pause">
+              {paused ? '▶' : '⏸'}
+            </button>
+          )}
           {!editMode && <button className="rctrl__gear" onClick={() => setShowSettings(s => !s)} aria-label="Réglages">⚙</button>}
         </div>
 
@@ -269,6 +279,66 @@ export default function RallyeControllerPage() {
             )
           })}
         </div>
+
+        {/* ── Choix de la voiture (salon) ── */}
+        {phase === 'lobby' && !editMode && (
+          <div
+            style={{
+              position: 'absolute', inset: 0, zIndex: 8, padding: '24px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              justifyContent: 'center', gap: '18px', background: 'rgba(6,8,12,0.72)',
+            }}
+          >
+            <div style={{ fontSize: '20px', fontWeight: 800, color: '#fff' }}>Choisis ta voiture</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', width: '100%', maxWidth: '440px' }}>
+              {RACER_COLORS.map((c, i) => {
+                const taken = roster.includes(i) && i !== me.car
+                const sel   = me.car === i
+                return (
+                  <button
+                    key={i}
+                    disabled={taken}
+                    onClick={() => ctrlRef.current?.selectCar?.(i)}
+                    style={{
+                      background: c.body, color: '#0a0a0a', fontWeight: 800,
+                      border: 'none', borderRadius: '14px', padding: '20px 8px',
+                      fontSize: '15px', cursor: taken ? 'default' : 'pointer',
+                      opacity: taken ? 0.28 : 1,
+                      boxShadow: sel ? `0 0 0 4px #fff, 0 0 18px ${c.neon}` : `0 0 12px ${c.neon}`,
+                    }}
+                  >
+                    {c.name}
+                  </button>
+                )
+              })}
+            </div>
+            <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)' }}>Prêt ! En attente du départ…</div>
+          </div>
+        )}
+
+        {/* ── Pause (course) ── */}
+        {paused && !editMode && (
+          <div
+            style={{
+              position: 'absolute', inset: 0, zIndex: 9, padding: '24px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              justifyContent: 'center', gap: '18px', background: 'rgba(6,8,12,0.82)',
+            }}
+          >
+            <div style={{ fontSize: '52px' }}>⏸</div>
+            <div style={{ fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '2px' }}>EN PAUSE</div>
+            <button
+              onClick={() => ctrlRef.current?.togglePause?.()}
+              style={{
+                background: 'var(--me, #fff)', color: '#0a0a0a', fontWeight: 800,
+                border: 'none', borderRadius: '14px', padding: '16px 32px',
+                fontSize: '17px', cursor: 'pointer',
+              }}
+            >
+              Reprendre ▶
+            </button>
+          </div>
+        )}
 
         {editMode && (
           <div className="rctrl__editbar">

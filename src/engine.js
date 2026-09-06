@@ -307,6 +307,10 @@ export class Game {
       wheel: new THREE.CylinderGeometry(0.45, 0.45, 0.35, 16),  // roue (essieu le long de X)
       spoke: new THREE.BoxGeometry(0.12, 0.82, 0.12),           // rayon visible -> montre la rotation
     }
+    // Géométries partagées : réutilisées d'un objet à l'autre, JAMAIS à libérer.
+    // (Les matériaux `_mat` sont tous partagés eux aussi → on ne libère que les
+    // géométries créées à la volée pour trains/power-ups/barres hautes.)
+    this._sharedGeo = new Set(Object.values(this._geo))
     this._mat = {
       coin: new THREE.MeshStandardMaterial({ color: '#ffcf33', metalness: 0.7, roughness: 0.3, emissive: '#7a5a00', emissiveIntensity: 0.3 }),
       train: new THREE.MeshStandardMaterial({ color: '#f4c518', metalness: 0.3, roughness: 0.45 }),
@@ -940,8 +944,8 @@ export class Game {
     this.magnetT = 0             // temps restant d'aimant
     this.bootsT = 0              // temps restant de bottes (super-saut)
     this.cb.onPower?.(0, 0)
-    // vide les objets dynamiques éventuels
-    if (this.items) for (const it of this.items) this.scene.remove(it.mesh)
+    // vide les objets dynamiques éventuels (avec libération mémoire GPU)
+    if (this.items) for (const it of this.items) this._removeItem(it.mesh)
     this.items = []
     if (this.player) { this.player.position.set(0, 0, 0); this.player.rotation.set(0, 0, 0); this.player.scale.y = 1 }
     if (this.police) { this.police.position.set(0, 0, POLICE_FAR); this.police.rotation.set(0, 0, 0) }
@@ -1021,6 +1025,14 @@ export class Game {
       this._addPower(lane, Math.random() < 0.5 ? 'magnet' : 'boots')
       return
     }
+    // Passage FORCÉ : un obstacle qui barre les TROIS voies -> impossible de
+    // l'esquiver en changeant de voie. Le joueur DOIT sauter (barrière) ou se
+    // baisser (barre haute). Réservé à la partie lancée (>18 s) et peu fréquent
+    // pour rester un pic de difficulté, pas la norme.
+    if (this.time > 18 && Math.random() < 0.07) {
+      this._addGate(Math.random() < 0.5 ? 'barrier' : 'lowbar', SPAWN_Z)
+      return
+    }
     if (r < 0.06) {
       // deux trains montables qui se suivent : on grimpe (rampe avant du 1er) et on
       // court d'un toit à l'autre. Seul le 1er porte la rampe visible (toits jointifs).
@@ -1049,9 +1061,28 @@ export class Game {
     }
   }
 
+  // Barre les TROIS voies d'un coup : le joueur ne peut pas esquiver latéralement,
+  // il doit sauter (kind='barrier') ou se baisser (kind='lowbar'). On pose le même
+  // obstacle sur chaque voie ; les petits interstices entre voies sont couverts par
+  // la détection de collision par-voie (une position intermédiaire touche les deux
+  // voies adjacentes), donc aucun passage possible sans réagir.
+  _addGate(kind, z = SPAWN_Z) {
+    for (let l = 0; l < 3; l++) this._addObstacle(l, kind, z)
+  }
+
   // Rangée de pièces posées au-dessus d'un train (le long du toit).
   _addRoofCoins(lane, zCenter) {
     for (let i = -2; i <= 2; i++) this._addCoin(lane, zCenter + i * 3, ROOF_COIN_Y)
+  }
+
+  // Retire un objet dynamique de la scène ET libère les géométries créées à la
+  // volée (celles hors du cache partagé). Sans ça, la mémoire GPU grimpe match
+  // après match jusqu'à la perte du contexte WebGL (écran noir).
+  _removeItem(mesh) {
+    this.scene.remove(mesh)
+    mesh.traverse(o => {
+      if (o.isMesh && o.geometry && !this._sharedGeo.has(o.geometry)) o.geometry.dispose()
+    })
   }
 
   _addCoin(lane, z, y = 1.1) {
@@ -1307,7 +1338,7 @@ export class Game {
     // nettoyage
     this.items = this.items.filter(it => {
       const keep = it.z < DESPAWN_Z && !it.taken
-      if (!keep) this.scene.remove(it.mesh)
+      if (!keep) this._removeItem(it.mesh)
       return keep
     })
 

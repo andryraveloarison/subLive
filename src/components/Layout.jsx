@@ -28,6 +28,10 @@ export default function Layout() {
   // en ligne). Nouvelle clé : l'ancienne (dashikara_best) était en score-distance.
   const [best, setBest] = useState(() => Number(localStorage.getItem('dashikara_best_coins') || 0))
   const [power, setPower] = useState({ magnet: false, boots: false })
+  // Incrémenté quand un score est écrit en base : sert de `refreshKey` aux
+  // classements affichés (Game Over, menu) pour qu'ils se rechargent APRÈS
+  // l'upsert et non pendant (sinon ils montrent l'ancien classement).
+  const [scoreVersion, setScoreVersion] = useState(0)
   const [cam, setCam] = useState('off')
   const [camMsg, setCamMsg] = useState('')
   const [camHidden, setCamHidden] = useState(false)   // aperçu masqué en jeu (mobile)
@@ -46,8 +50,8 @@ export default function Layout() {
   // match / personnages
   const [isMatch, setIsMatch] = useState(false)
   const [numPlayers, setNumPlayers] = useState(1)
-  const [picks, setPicks] = useState([0, 1, 2, 3])
-  const [names, setNames] = useState(['Joueur 1', 'Joueur 2', 'Joueur 3', 'Joueur 4'])
+  const [picks, setPicks] = useState([0, 1, 2, 3, 4, 5, 6, 7])
+  const [names, setNames] = useState(['Joueur 1', 'Joueur 2', 'Joueur 3', 'Joueur 4', 'Joueur 5', 'Joueur 6', 'Joueur 7', 'Joueur 8'])
   const [turnIdx, setTurnIdx] = useState(0)
   const [round, setRound] = useState(1)
   const [totals, setTotals] = useState([0])
@@ -93,7 +97,9 @@ export default function Layout() {
   endRunRef.current = (finalScore, finalCoins) => {
     // Classement Supabase : meilleures PIÈCES gagnées en une partie
     // par (pseudo du jeu, appareil) — pas le score de distance.
+    // On rafraîchit les classements affichés une fois l'écriture confirmée.
     submitScore(names[turnIdx] || `Joueur ${turnIdx + 1}`, getDevice(), finalCoins)
+      .then(updated => { if (updated) setScoreVersion(v => v + 1) })
     if (!isMatch) {
       if (finalCoins > best) { setBest(finalCoins); localStorage.setItem('dashikara_best_coins', String(finalCoins)) }
       go('/over')
@@ -174,7 +180,7 @@ export default function Layout() {
   const ranking = totals.map((t, i) => ({ i, t })).sort((a, b) => b.t - a.t)
 
   const value = {
-    score, coins, best, power, cam, camMsg,
+    score, coins, best, power, cam, camMsg, scoreVersion,
     isMatch, numPlayers, setNumPlayers, picks, setPicks, names, setNames,
     turnIdx, round, totals, lastCoins,
     pName, ranking,

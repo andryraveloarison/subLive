@@ -24,6 +24,7 @@ export class PoseController {
     this.lane = 1
     this.t = 0
     this._lastDetect = 0
+    this._detectErrs = 0        // erreurs de détection consécutives (résilience boucle)
     // Détection limitée à ~30 img/s : le modèle tourne sur CPU et, lancé à chaque
     // frame (jusqu'à 60/s), il monopolisait le CPU et faisait ramer le rendu 3D.
     // 30/s reste largement suffisant pour suivre les gestes.
@@ -67,8 +68,19 @@ export class PoseController {
     const now = performance.now()
     if (this.video.readyState >= 2 && now - this._lastDetect >= this._detectInterval) {
       this._lastDetect = now
-      const res = this.landmarker.detectForVideo(this.video, now)
-      if (res.landmarks && res.landmarks[0]) this._process(res.landmarks[0], now)
+      try {
+        const res = this.landmarker.detectForVideo(this.video, now)
+        if (res.landmarks && res.landmarks[0]) this._process(res.landmarks[0], now)
+        this._detectErrs = 0
+      } catch (err) {
+        // Une frame peut échouer ponctuellement — typiquement quand le contexte
+        // WebGL interne de MediaPipe est momentanément perdu parce que d'autres
+        // canvases 3D (les portraits du SetupScreen) saturent la limite ~16 du
+        // navigateur. On NE tue PAS la boucle : sans ce try/catch, l'exception
+        // empêchait le requestAnimationFrame ci-dessous et la détection restait
+        // morte jusqu'au rechargement de la page (« la caméra ne marche plus »).
+        if (++this._detectErrs === 1) console.warn('[webcam] détection en erreur, on continue', err)
+      }
     }
     requestAnimationFrame(this._loop)
   }
