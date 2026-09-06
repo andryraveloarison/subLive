@@ -2223,6 +2223,9 @@ canvas {
   border: 1px solid rgba(247, 230, 196, 0.25);
 }
 
+/* Classement complet : liste défilante au-delà des premiers rangs visibles */
+.datax__rank--scroll { max-height: 360px; overflow-y: auto; padding-right: 4px; }
+
 /* Top 3 des joueurs les plus actifs — médailles */
 .datax__rank-medal { width: 24px; text-align: center; font-size: 18px; flex: none; }
 .datax__chart-val { fill: rgba(255,255,255,0.85); font-size: 12px; font-weight: 700; }

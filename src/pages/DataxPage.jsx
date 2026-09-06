@@ -79,7 +79,7 @@ function Dashboard({ onExit }) {
 
   useEffect(() => {
     let on = true
-    Promise.all([fetchPlays(null), fetchPlays('dashikara'), fetchLeaderboard(20), fetchPlayerCount(), fetchReviews()])
+    Promise.all([fetchPlays(null), fetchPlays('dashikara'), fetchLeaderboard(1000), fetchPlayerCount(), fetchReviews()])
       .then(([all, dash, rank, count, revs]) => {
         if (!on) return
         setAllPlays(all); setDashPlays(dash); setRanking(rank); setPlayers(count); setReviews(revs)
@@ -208,7 +208,7 @@ function Dashboard({ onExit }) {
               {players != null && <span className="datax__badge">{players} joueur{players > 1 ? 's' : ''}</span>}
             </div>
             {ranking && ranking.length > 0 ? (
-              <div className="datax__rank">
+              <div className="datax__rank datax__rank--scroll">
                 {ranking.map((r, i) => (
                   <div key={r.pseudo + '·' + r.device} className={`datax__rank-row${i === 0 ? ' is-lead' : ''}`}>
                     <span className="datax__rank-pos">{i + 1}</span>
